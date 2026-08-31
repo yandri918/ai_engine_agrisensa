@@ -1,0 +1,200 @@
+{
+  "name": "WF-12: Google Drive Automated Knowledge Watcher & Ingester",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "event": "fileCreated",
+        "options": {
+          "fileType": "all"
+        }
+      },
+      "id": "wf12-gdrive-trigger",
+      "name": "📁 Google Drive Folder Watcher",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "credentials": {
+        "googleDriveOAuth2": {
+          "id": "agrisensa-gdrive-oauth",
+          "name": "AgriSensa Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}",
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "wf12-gdrive-download",
+      "name": "📥 Download File from GDrive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [420, 300],
+      "credentials": {
+        "googleDriveOAuth2": {
+          "id": "agrisensa-gdrive-oauth",
+          "name": "AgriSensa Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract binary file and encode to base64 for MCP Parser\nconst item = $input.first();\nconst binaryData = item.binary ? item.binary.data : null;\nconst filename = item.json.name || 'document.pdf';\n\nif (!binaryData) {\n  throw new Error('File binary tidak ditemukan dari Google Drive');\n}\n\nlet fileType = 'pdf';\nif (filename.endsWith('.docx')) fileType = 'docx';\nelse if (filename.endsWith('.xlsx')) fileType = 'xlsx';\nelse if (filename.endsWith('.csv')) fileType = 'csv';\nelse if (filename.endsWith('.txt')) fileType = 'text';\n\nreturn [{\n  json: {\n    filename: filename,\n    file_type: fileType,\n    file_base64: binaryData.data,\n    gdrive_file_id: item.json.id,\n    gdrive_mime_type: item.json.mimeType,\n    uploaded_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf12-binary-converter",
+      "name": "🔄 Binary to Base64 Formatter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://host.docker.internal:8001' }}/mcp/parse-document",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filename\": \"{{ $json.filename }}\",\n  \"file_base64\": \"{{ $json.file_base64 }}\",\n  \"file_type\": \"{{ $json.file_type }}\"\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "wf12-mcp-parser",
+      "name": "📄 MCP Document Parser Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ═══════════════════════════════════════════════════\n// SEMANTIC CHUNKER FOR GOOGLE DRIVE INGESTION\n// ═══════════════════════════════════════════════════\nconst parsed = $input.first().json.data || $input.first().json;\nconst text = parsed.extracted_text || '';\nconst filename = $('🔄 Binary to Base64 Formatter').item.json.filename;\nconst metrics = parsed.extracted_metrics || {};\n\nconst CHUNK_SIZE = 800;\nconst CHUNK_OVERLAP = 100;\nconst chunks = [];\n\nif (text.length > 0) {\n  let start = 0;\n  let chunkIdx = 0;\n  while (start < text.length) {\n    const end = Math.min(start + CHUNK_SIZE, text.length);\n    const chunkText = text.substring(start, end).trim();\n    if (chunkText.length > 50) {\n      chunks.push({\n        chunk_index: chunkIdx,\n        chunk_text: chunkText,\n        filename: filename,\n        total_characters: chunkText.length\n      });\n      chunkIdx++;\n    }\n    start += (CHUNK_SIZE - CHUNK_OVERLAP);\n  }\n}\n\nreturn [{\n  json: {\n    document_title: filename,\n    source: 'google_drive',\n    total_chunks: chunks.length,\n    total_characters: text.length,\n    ai_summary: parsed.ai_summary || '',\n    extracted_metrics: metrics,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf12-semantic-chunker",
+      "name": "✂️ Semantic Chunker Node",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO knowledge_ingestion_log (\n    document_title,\n    source_type,\n    total_chunks,\n    total_characters,\n    collection_name,\n    ingestion_status,\n    metadata\n) VALUES (\n    '{{ $json.document_title }}',\n    'google_drive',\n    {{ $json.total_chunks }},\n    {{ $json.total_characters }},\n    'agrisensa_kb',\n    'completed',\n    '{{ JSON.stringify({ summary: $json.ai_summary, metrics: $json.extracted_metrics }) }}'::jsonb\n) RETURNING id, created_at;"
+      },
+      "id": "wf12-save-db",
+      "name": "💾 Save to Knowledge Base (PostgreSQL)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1300, 300],
+      "credentials": {
+        "postgres": {
+          "id": "agrisensa-postgres",
+          "name": "AgriSensa PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ADMIN_CHAT_ID || '' }}",
+        "text": "=📚 *AGRISENSA KNOWLEDGE INGESTED*\n\nFile baru dari Google Drive berhasil dipelajari oleh AI:\n📄 *Dokumen:* `{{ $('✂️ Semantic Chunker Node').item.json.document_title }}`\n✂️ *Total Chunks:* `{{ $('✂️ Semantic Chunker Node').item.json.total_chunks }}`\n📝 *Ringkasan:* {{ $('✂️ Semantic Chunker Node').item.json.ai_summary }}\n\n_AI siap menjawab pertanyaan seputar SOP ini._",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "wf12-telegram-alert",
+      "name": "📢 Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1520, 300],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "📁 Google Drive Folder Watcher": {
+      "main": [
+        [
+          {
+            "node": "📥 Download File from GDrive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Download File from GDrive": {
+      "main": [
+        [
+          {
+            "node": "🔄 Binary to Base64 Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Binary to Base64 Formatter": {
+      "main": [
+        [
+          {
+            "node": "📄 MCP Document Parser Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 MCP Document Parser Node": {
+      "main": [
+        [
+          {
+            "node": "✂️ Semantic Chunker Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✂️ Semantic Chunker Node": {
+      "main": [
+        [
+          {
+            "node": "💾 Save to Knowledge Base (PostgreSQL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Save to Knowledge Base (PostgreSQL)": {
+      "main": [
+        [
+          {
+            "node": "📢 Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

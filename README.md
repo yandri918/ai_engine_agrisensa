@@ -118,7 +118,7 @@ sequenceDiagram
 agrisensa-unified-engine/
 │
 ├── 📁 01_n8n_orchestration/              # Master Workflow Automation & Stack
-│   ├── 📁 workflows/                     # 13 JSON Workflow n8n Teruji
+│   ├── 📁 workflows/                     # 14 JSON Workflow n8n Teruji
 │   │   ├── 00_master_orchestrator.json   # Dispatcher rute & token auth
 │   │   ├── 01_agentic_rag_chat.json      # RAG Chatbot dengan Gemini
 │   │   ├── 02_ml_inference_engine.json   # Router inferensi ML port 8000
@@ -131,12 +131,13 @@ agrisensa-unified-engine/
 │   │   ├── 09_mcp_tools_workflow.json    # Eksekutor Tool MCP
 │   │   ├── 10_rag_knowledge_ingestion.json# Ingest SOP ke Vector Store
 │   │   ├── 11_supply_chain_traceability.json # Supply Chain & QR Passport Engine
+│   │   ├── 12_google_drive_knowledge_watcher.json # GDrive Automated Ingester
 │   │   └── 99_global_error_handler.json  # Fail-safe & error alerting
 │   ├── docker-compose.n8n.yml            # Stack n8n + PostgreSQL + Redis
 │   ├── init-db.sql                       # Inisialisasi skema & tabel database
 │   ├── setup_n8n_engine.ps1              # Skrip setup otomatis PowerShell
 │   ├── .env.n8n                          # Konfigurasi environment n8n
-│   └── README_N8N_ENGINE.md              # Dokumentasi lengkap 13 workflow
+│   └── README_N8N_ENGINE.md              # Dokumentasi lengkap 14 workflow
 │
 ├── 📁 02_ai_reasoning_mcp/               # Advanced Reasoning & MCP Tool Engine
 │   ├── 📁 ai_engine/                     # 13 Modul Logika & Analisis
