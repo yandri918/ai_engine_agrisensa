@@ -118,7 +118,7 @@ sequenceDiagram
 agrisensa-unified-engine/
 │
 ├── 📁 01_n8n_orchestration/              # Master Workflow Automation & Stack
-│   ├── 📁 workflows/                     # 12 JSON Workflow n8n Teruji
+│   ├── 📁 workflows/                     # 13 JSON Workflow n8n Teruji
 │   │   ├── 00_master_orchestrator.json   # Dispatcher rute & token auth
 │   │   ├── 01_agentic_rag_chat.json      # RAG Chatbot dengan Gemini
 │   │   ├── 02_ml_inference_engine.json   # Router inferensi ML port 8000
@@ -130,21 +130,23 @@ agrisensa-unified-engine/
 │   │   ├── 08_agrisensa_advanced_engine.json # Monte Carlo & RAB port 8001
 │   │   ├── 09_mcp_tools_workflow.json    # Eksekutor Tool MCP
 │   │   ├── 10_rag_knowledge_ingestion.json# Ingest SOP ke Vector Store
+│   │   ├── 11_supply_chain_traceability.json # Supply Chain & QR Passport Engine
 │   │   └── 99_global_error_handler.json  # Fail-safe & error alerting
 │   ├── docker-compose.n8n.yml            # Stack n8n + PostgreSQL + Redis
 │   ├── init-db.sql                       # Inisialisasi skema & tabel database
 │   ├── setup_n8n_engine.ps1              # Skrip setup otomatis PowerShell
 │   ├── .env.n8n                          # Konfigurasi environment n8n
-│   └── README_N8N_ENGINE.md              # Dokumentasi lengkap 12 workflow
+│   └── README_N8N_ENGINE.md              # Dokumentasi lengkap 13 workflow
 │
 ├── 📁 02_ai_reasoning_mcp/               # Advanced Reasoning & MCP Tool Engine
-│   ├── 📁 ai_engine/                     # 12 Modul Logika & Analisis
+│   ├── 📁 ai_engine/                     # 13 Modul Logika & Analisis
 │   │   ├── rab_engine.py                 # Perhitungan Rencana Anggaran Biaya
 │   │   ├── monte_carlo.py                # Simulasi risiko panen 10.000 iterasi
 │   │   ├── market_intel.py               # Intelijen harga komoditas ID & JP
 │   │   ├── carbon_model.py               # Estimasi jejak karbon (IPCC Tier-1)
 │   │   ├── forecasting_model.py          # Proyeksi deret waktu harga/panen
 │   │   ├── language_switch.py            # Adaptor bahasa & lokalisasi MCP
+│   │   ├── supply_chain.py               # Supply Chain & QR Passport Generator
 │   │   ├── search_engine.py              # DuckDuckGo agricultural search
 │   │   ├── web_scraper.py                # Scraper portal pasar & agrikultur
 │   │   ├── document_parser.py            # Parser PyMuPDF, Docx, Excel, CSV

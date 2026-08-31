@@ -34,7 +34,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ai_engine import (
     RABEngine, MonteCarloEngine, JaMarketIntelEngine,
     CarbonModel, ForecastingModel, LanguageSwitchEngine, PDFGenerator,
-    SearchEngine, WebScraper, DocumentParser, ChartEngine,
+    SearchEngine, WebScraper, DocumentParser, ChartEngine, SupplyChainEngine,
 )
 
 from dotenv import load_dotenv
@@ -103,6 +103,7 @@ def get_engine(name: str):
             "scraper":  WebScraper,
             "parser":   DocumentParser,
             "chart":    ChartEngine,
+            "supply_chain": SupplyChainEngine,
         }
         _engines[name] = engine_map[name]()
         logger.info(f"Engine '{name}' initialized")
@@ -658,6 +659,104 @@ async def mcp_visualize(req: VisualizeMCPRequest):
         }
     except Exception as e:
         logger.error(f"Chart visualizer error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Supply Chain & QR Passport Endpoints (AgriSensa Biz)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TraceabilityPassportRequest(BaseModel):
+    komoditas: str = Field("Cabai Merah", example="Cabai Merah")
+    farmer_name: str = Field("Pak Joko (Poktan Sumber Makmur)", example="Pak Joko")
+    lokasi_lahan: str = Field("Desa Cibodas, Lembang, Jawa Barat", example="Lembang, Jawa Barat")
+    luas_ha: float = Field(0.5, example=0.5)
+    tanggal_panen: Optional[str] = Field(None, example="2026-08-31")
+    varietas_benih: str = Field("Cabai Hibrida F1", example="Cabai Hibrida F1")
+    grade_kualitas: str = Field("Grade A Super (Standar Resto & Pasar Induk)", example="Grade A Super")
+    volume_kg: float = Field(1500.0, example=1500.0)
+    perlakuan_pupuk: str = Field("NPK Presisi + Trichoderma Hayati", example="NPK Presisi")
+    perlakuan_pestisida: str = Field("Pestisida Nabati (Aman Residu)", example="Pestisida Nabati")
+    gps_coordinates: Optional[Dict[str, float]] = Field(default_factory=lambda: {"lat": -6.8167, "lon": 107.6167})
+    sertifikasi_list: Optional[List[str]] = Field(None)
+
+class QRGenerateRequest(BaseModel):
+    data: str = Field("https://trace.agrisensa.com/passport/LOT-CABAI-20260831-01", description="URL atau teks data paspor")
+    fill_color: str = Field("#064e3b", example="#064e3b")
+    box_size: int = Field(10, example=10)
+
+class ShelfLifeLossRequest(BaseModel):
+    komoditas: str = Field("cabai_merah", example="cabai_merah")
+    volume_kg: float = Field(1000.0, example=1000.0)
+    transit_hours: float = Field(24.0, example=24.0)
+    use_cold_chain: bool = Field(False, example=False)
+
+@app.post("/supply-chain/traceability", summary="Generate Complete Traceability Digital Passport", tags=["Supply Chain & AgriSensa Biz"])
+async def generate_traceability_passport(req: TraceabilityPassportRequest):
+    """Menghasilkan paspor digital ketertelusuran rantai pasok lengkap beserta QR Code dan digital signature hash."""
+    try:
+        engine: SupplyChainEngine = get_engine("supply_chain")
+        passport = engine.create_traceability_passport(
+            komoditas=req.komoditas,
+            farmer_name=req.farmer_name,
+            lokasi_lahan=req.lokasi_lahan,
+            luas_ha=req.luas_ha,
+            tanggal_panen=req.tanggal_panen,
+            varietas_benih=req.varietas_benih,
+            grade_kualitas=req.grade_kualitas,
+            volume_kg=req.volume_kg,
+            perlakuan_pupuk=req.perlakuan_pupuk,
+            perlakuan_pestisida=req.perlakuan_pestisida,
+            gps_coordinates=req.gps_coordinates,
+            sertifikasi_list=req.sertifikasi_list
+        )
+        return {
+            "success": True,
+            "data": passport,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Traceability passport error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/qr/generate-passport", summary="Generate High Resolution QR Code Image", tags=["Supply Chain & AgriSensa Biz"])
+async def generate_qr_passport(req: QRGenerateRequest):
+    """Menghasilkan gambar QR Code Base64 untuk pencetakan label stiker produk/kemasan."""
+    try:
+        engine: SupplyChainEngine = get_engine("supply_chain")
+        qr_result = engine.generate_qr_code(
+            data=req.data,
+            fill_color=req.fill_color,
+            box_size=req.box_size
+        )
+        return {
+            "success": True,
+            "data": qr_result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"QR generator error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/supply-chain/shelf-life", summary="Calculate Postharvest Loss & Shelf-Life", tags=["Supply Chain & AgriSensa Biz"])
+async def calculate_shelf_life(req: ShelfLifeLossRequest):
+    """Menghitung estimasi susut bobot saat pengiriman dan sisa umur simpan komoditas."""
+    try:
+        engine: SupplyChainEngine = get_engine("supply_chain")
+        loss_result = engine.calculate_shelf_life_and_loss(
+            komoditas=req.komoditas,
+            volume_kg=req.volume_kg,
+            transit_hours=req.transit_hours,
+            use_cold_chain=req.use_cold_chain
+        )
+        return {
+            "success": True,
+            "data": loss_result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Shelf life calculation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

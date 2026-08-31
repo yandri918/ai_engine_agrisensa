@@ -1,0 +1,133 @@
+{
+  "name": "WF-11: Supply Chain & QR Traceability Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/supply-chain",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "wf11-webhook",
+      "name": "📦 Supply Chain Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate input\nconst body = $input.first().json.body || $input.first().json;\n\nconst komoditas = body.komoditas || 'Cabai Merah';\nconst farmer_name = body.farmer_name || 'Petani Mitra AgriSensa';\nconst lokasi_lahan = body.lokasi_lahan || 'Jawa Barat';\nconst luas_ha = parseFloat(body.luas_ha || 0.5);\nconst volume_kg = parseFloat(body.volume_kg || 1000);\nconst varietas = body.varietas_benih || 'Unggul F1';\nconst grade = body.grade_kualitas || 'Grade A Super';\n\nreturn [{\n  json: {\n    komoditas: komoditas,\n    farmer_name: farmer_name,\n    lokasi_lahan: lokasi_lahan,\n    luas_ha: luas_ha,\n    volume_kg: volume_kg,\n    varietas_benih: varietas,\n    grade_kualitas: grade,\n    perlakuan_pupuk: body.perlakuan_pupuk || 'NPK Presisi + Organik Hayati',\n    perlakuan_pestisida: body.perlakuan_pestisida || 'Pestisida Nabati',\n    gps_coordinates: body.gps_coordinates || { lat: -6.8167, lon: 107.6167 },\n    tanggal_panen: body.tanggal_panen || new Date().toISOString().split('T')[0],\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf11-validator",
+      "name": "🔍 Batch Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://host.docker.internal:8001' }}/supply-chain/traceability",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "wf11-api-call",
+      "name": "🏷️ Generate Digital Passport & QR",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO n8n_execution_logs (workflow_id, workflow_name, status, response_payload, created_at)\nVALUES ('WF-11', 'Supply Chain & QR Passport', 'SUCCESS', $1, NOW())\nON CONFLICT DO NOTHING;",
+        "additionalFields": {
+          "queryParams": "={{ JSON.stringify($json.data) }}"
+        }
+      },
+      "id": "wf11-db-log",
+      "name": "💾 Log Batch to PostgreSQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('🏷️ Generate Digital Passport & QR').first().json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "wf11-response",
+      "name": "📤 Respond QR Passport",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "wf11-webhook": {
+      "main": [
+        [
+          {
+            "node": "wf11-validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wf11-validator": {
+      "main": [
+        [
+          {
+            "node": "wf11-api-call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wf11-api-call": {
+      "main": [
+        [
+          {
+            "node": "wf11-db-log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wf11-db-log": {
+      "main": [
+        [
+          {
+            "node": "wf11-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

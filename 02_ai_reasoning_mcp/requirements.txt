@@ -36,3 +36,7 @@ PyMuPDF>=1.24.0           # Fast PDF extraction (fitz)
 pypdf>=4.2.0              # Secondary PDF reader fallback
 python-docx>=1.1.0        # Word document parsing (.docx)
 openpyxl>=3.1.0           # Excel spreadsheet parsing (.xlsx)
+
+# Supply Chain & QR Passport Generator (AgriSensa Biz)
+qrcode[pil]>=7.4.2        # QR Code Generator with Pillow support
+
