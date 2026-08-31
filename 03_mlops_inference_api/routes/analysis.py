@@ -1,11 +1,18 @@
 import os
 import uuid
 import tempfile
+import logging
 from fastapi import APIRouter, File, UploadFile, HTTPException
 from schemas import NpkAnalysisInput
 from services.analysis_service import AnalysisService
 from config import settings
-from inference_sdk import InferenceHTTPClient
+
+try:
+    from inference_sdk import InferenceHTTPClient
+except ImportError:
+    InferenceHTTPClient = None
+
+logger = logging.getLogger("mlops_api.routes.analysis")
 
 router = APIRouter(prefix="/api/analysis", tags=["Analysis"])
 
