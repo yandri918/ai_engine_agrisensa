@@ -1,0 +1,176 @@
+{
+  "name": "WF-03: Computer Vision Disease Detection Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/vision",
+        "responseMode": "responseNode",
+        "options": {"allowedOrigins": "*", "binaryData": true}
+      },
+      "id": "wf03-webhook",
+      "name": "📸 Vision Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate image input\nconst body = $input.first().json.body || $input.first().json;\n\nconst imageBase64 = body.image_base64 || body.image || null;\nconst analysisType = body.analysis_type || 'disease_detection'; // 'disease_detection' | 'bwd_analysis' | 'both'\nconst sessionId = body.session_id || `cv_${Date.now()}`;\n\n// Validate base64 image\nif (!imageBase64) {\n  throw new Error('Field image_base64 wajib disertakan');\n}\n\n// Check image size (max 10MB base64 ≈ 7.5MB original)\nconst sizeBytes = Math.ceil(imageBase64.length * 0.75);\nif (sizeBytes > 10 * 1024 * 1024) {\n  throw new Error('Ukuran gambar terlalu besar. Maksimum 10MB.');\n}\n\n// Detect image format from base64 header\nlet imageFormat = 'jpeg';\nif (imageBase64.startsWith('/9j/')) imageFormat = 'jpeg';\nelse if (imageBase64.startsWith('iVBOR')) imageFormat = 'png';\nelse if (imageBase64.startsWith('R0lG')) imageFormat = 'gif';\n\nreturn [{\n  json: {\n    image_base64: imageBase64,\n    image_format: imageFormat,\n    image_size_bytes: sizeBytes,\n    analysis_type: analysisType,\n    session_id: sessionId,\n    request_id: `cv_${Date.now()}_${Math.random().toString(36).substr(2,6)}`,\n    start_time: Date.now()\n  }\n}];"
+      },
+      "id": "wf03-validator",
+      "name": "✅ Image Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://infer.roboflow.com/andriyanto39/detect-and-classify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "api_key", "value": "={{ $env.ROBOFLOW_API_KEY }}"},
+            {"name": "image", "value": "={{ $json.image_base64 }}"},
+            {"name": "confidence", "value": "0.4"},
+            {"name": "overlap", "value": "0.3"}
+          ]
+        },
+        "options": {"timeout": 30000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf03-roboflow",
+      "name": "🔬 Roboflow Disease Detection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://localhost:8000' }}/api/analysis/bwd",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\"image_base64\": \"{{ $('✅ Image Validator').item.json.image_base64 }}\"}",
+        "options": {"timeout": 30000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf03-bwd",
+      "name": "🌾 BWD Leaf Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 560]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByIndex",
+        "options": {}
+      },
+      "id": "wf03-merge",
+      "name": "🔗 Merge CV Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse and combine results from Roboflow + BWD\nconst items = $input.all();\nconst validatorData = $('✅ Image Validator').item.json;\n\n// Parse Roboflow result\nlet roboflowResult = {};\nlet bwdResult = {};\n\n// Try to get results from both branches\nfor (const item of items) {\n  if (item.json.predictions !== undefined) {\n    // Roboflow format\n    roboflowResult = {\n      predictions: item.json.predictions || [],\n      image: item.json.image || {},\n      total_detections: (item.json.predictions || []).length\n    };\n  } else if (item.json.bwd_score !== undefined || item.json.green_ratio !== undefined) {\n    // BWD format\n    bwdResult = item.json;\n  }\n}\n\n// Calculate summary\nconst diseases = (roboflowResult.predictions || []).map(p => ({\n  class: p.class,\n  confidence: Math.round(p.confidence * 100),\n  bbox: {x: p.x, y: p.y, width: p.width, height: p.height}\n}));\n\nconst avgConfidence = diseases.length > 0\n  ? diseases.reduce((sum, d) => sum + d.confidence, 0) / diseases.length\n  : 0;\n\nreturn [{\n  json: {\n    ...validatorData,\n    roboflow_detections: roboflowResult,\n    bwd_analysis: bwdResult,\n    diseases_found: diseases,\n    disease_count: diseases.length,\n    avg_confidence: Math.round(avgConfidence),\n    analysis_complete: true\n  }\n}];"
+      },
+      "id": "wf03-parser",
+      "name": "🗂️ Parse CV Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Anda adalah AI Plant Doctor AgriSensa. Berikan diagnosis dan rekomendasi penanganan berdasarkan hasil deteksi penyakit tanaman berikut. Jawab dalam Bahasa Indonesia yang ramah dan mudah dipahami petani.\\n\\nHasil Deteksi Roboflow:\\n{{ JSON.stringify($json.diseases_found, null, 2) }}\\n\\nHasil Analisis BWD (Blade Width Detection):\\n{{ JSON.stringify($json.bwd_analysis, null, 2) }}\\n\\nBerikan:\\n1. Diagnosis utama penyakit/kondisi tanaman\\n2. Tingkat keparahan (Ringan/Sedang/Berat)\\n3. Penyebab yang mungkin\\n4. Rekomendasi penanganan segera\\n5. Tindakan pencegahan\\n\"\n    }]\n  }],\n  \"generationConfig\": {\n    \"temperature\": 0.4,\n    \"maxOutputTokens\": 1024\n  }\n}",
+        "options": {"timeout": 30000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf03-gemini",
+      "name": "🧠 Gemini AI Interpretation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build final CV analysis report\nconst cvData = $('🗂️ Parse CV Results').item.json;\nconst geminiResponse = $input.first().json;\n\nconst aiInterpretation = geminiResponse?.candidates?.[0]?.content?.parts?.[0]?.text\n  || 'Tidak dapat menghasilkan interpretasi AI saat ini.';\n\nconst processingTime = Date.now() - cvData.start_time;\n\nreturn [{\n  json: {\n    success: true,\n    request_id: cvData.request_id,\n    session_id: cvData.session_id,\n    analysis_type: cvData.analysis_type,\n    image_info: {\n      format: cvData.image_format,\n      size_bytes: cvData.image_size_bytes\n    },\n    detections: {\n      total_diseases_found: cvData.disease_count,\n      diseases: cvData.diseases_found,\n      avg_confidence_pct: cvData.avg_confidence\n    },\n    bwd_analysis: cvData.bwd_analysis,\n    ai_diagnosis: aiInterpretation,\n    severity: cvData.disease_count === 0 ? 'Sehat' :\n              cvData.avg_confidence < 50 ? 'Ringan' :\n              cvData.avg_confidence < 75 ? 'Sedang' : 'Berat',\n    processing_time_ms: processingTime,\n    metadata: {\n      engine: 'agrisensa-cv-v2',\n      models: ['roboflow-detect-classify', 'bwd-cv-model', 'gemini-2.0-flash'],\n      workflow: 'WF-03',\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "wf03-report-builder",
+      "name": "📋 Report Builder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO cv_analysis_reports (workflow_execution_id, analysis_type, image_size_bytes, detections, bwd_results, ai_interpretation, confidence_avg, status, session_id, created_at)\nVALUES (\n  '{{ $json.request_id }}',\n  '{{ $json.analysis_type }}',\n  {{ $json.image_info.size_bytes }},\n  '{{ JSON.stringify($json.detections).replace(/'/g, \"''\") }}',\n  '{{ JSON.stringify($json.bwd_analysis || {}).replace(/'/g, \"''\") }}',\n  '{{ $json.ai_diagnosis.replace(/'/g, \"''\") }}',\n  {{ $json.detections.avg_confidence_pct }},\n  'success',\n  '{{ $json.session_id }}',\n  NOW()\n);",
+        "additionalFields": {}
+      },
+      "id": "wf03-save-report",
+      "name": "💾 Save Report (PG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1760, 400],
+      "credentials": {"postgres": {"id": "agrisensa-postgres", "name": "AgriSensa PostgreSQL"}},
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "WF-03-Computer-Vision"}
+            ]
+          }
+        }
+      },
+      "id": "wf03-respond",
+      "name": "📤 Respond to Client",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1980, 400]
+    }
+  ],
+  "connections": {
+    "📸 Vision Webhook": {"main": [[{"node": "✅ Image Validator", "type": "main", "index": 0}]]},
+    "✅ Image Validator": {
+      "main": [[
+        {"node": "🔬 Roboflow Disease Detection", "type": "main", "index": 0},
+        {"node": "🌾 BWD Leaf Analysis", "type": "main", "index": 0}
+      ]]
+    },
+    "🔬 Roboflow Disease Detection": {"main": [[{"node": "🔗 Merge CV Results", "type": "main", "index": 0}]]},
+    "🌾 BWD Leaf Analysis": {"main": [[{"node": "🔗 Merge CV Results", "type": "main", "index": 1}]]},
+    "🔗 Merge CV Results": {"main": [[{"node": "🗂️ Parse CV Results", "type": "main", "index": 0}]]},
+    "🗂️ Parse CV Results": {"main": [[{"node": "🧠 Gemini AI Interpretation", "type": "main", "index": 0}]]},
+    "🧠 Gemini AI Interpretation": {"main": [[{"node": "📋 Report Builder", "type": "main", "index": 0}]]},
+    "📋 Report Builder": {"main": [[{"node": "💾 Save Report (PG)", "type": "main", "index": 0}]]},
+    "💾 Save Report (PG)": {"main": [[{"node": "📤 Respond to Client", "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "tags": ["agrisensa", "computer-vision", "disease-detection", "roboflow"],
+  "meta": {"description": "Computer Vision Engine - parallel Roboflow + BWD analysis with Gemini AI interpretation"}
+}

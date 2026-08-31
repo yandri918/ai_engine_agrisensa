@@ -1,0 +1,164 @@
+{
+  "name": "WF-06: MLOps Monitor & Drift Detection Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {"interval": [{"field": "hours", "hoursInterval": 24}]}
+      },
+      "id": "wf06-schedule",
+      "name": "⏰ Daily MLOps Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/mlops",
+        "responseMode": "responseNode",
+        "options": {"allowedOrigins": "*"}
+      },
+      "id": "wf06-webhook",
+      "name": "🔧 MLOps Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 550]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH recent_predictions AS (\n  SELECT\n    task_type,\n    COUNT(*) AS total,\n    COUNT(CASE WHEN status = 'success' THEN 1 END) AS successful,\n    COUNT(CASE WHEN status = 'error' THEN 1 END) AS errors,\n    AVG(processing_time_ms) AS avg_time_ms,\n    AVG(confidence_score) AS avg_confidence\n  FROM ml_predictions_log\n  WHERE created_at >= NOW() - INTERVAL '24 hours'\n  GROUP BY task_type\n),\nbaseline AS (\n  SELECT\n    task_type,\n    AVG(confidence_score) AS baseline_confidence,\n    AVG(processing_time_ms) AS baseline_time_ms\n  FROM ml_predictions_log\n  WHERE created_at BETWEEN NOW() - INTERVAL '7 days' AND NOW() - INTERVAL '24 hours'\n  GROUP BY task_type\n)\nSELECT\n  r.task_type,\n  r.total,\n  r.successful,\n  r.errors,\n  ROUND(r.avg_time_ms::numeric, 0) AS avg_time_ms,\n  ROUND(r.avg_confidence::numeric, 3) AS avg_confidence,\n  ROUND(b.baseline_confidence::numeric, 3) AS baseline_confidence,\n  ROUND(((b.baseline_confidence - r.avg_confidence) / NULLIF(b.baseline_confidence, 0) * 100)::numeric, 2) AS drift_pct,\n  CASE WHEN r.errors > r.total * 0.1 THEN TRUE ELSE FALSE END AS high_error_rate\nFROM recent_predictions r\nLEFT JOIN baseline b USING (task_type)\nORDER BY r.task_type;",
+        "additionalFields": {}
+      },
+      "id": "wf06-metrics-query",
+      "name": "📊 Query ML Metrics (PG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [450, 300],
+      "credentials": {"postgres": {"id": "agrisensa-postgres", "name": "AgriSensa PostgreSQL"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Drift detection algorithm\nconst metrics = $input.all();\nconst DRIFT_THRESHOLD = parseFloat($env.MODEL_DRIFT_THRESHOLD || '3.0');\nconst driftAlerts = [];\nconst metricsReport = [];\n\nfor (const item of metrics) {\n  const m = item.json;\n  const driftPct = parseFloat(m.drift_pct || 0);\n  const errorRate = m.total > 0 ? (m.errors / m.total * 100) : 0;\n  \n  const isDrifting = Math.abs(driftPct) > DRIFT_THRESHOLD;\n  const isHighError = m.high_error_rate || errorRate > 10;\n  \n  metricsReport.push({\n    model: m.task_type,\n    total_predictions_24h: m.total,\n    success_rate_pct: Math.round((m.successful / Math.max(m.total, 1)) * 100),\n    avg_confidence: m.avg_confidence,\n    confidence_drift_pct: driftPct,\n    avg_response_ms: m.avg_time_ms,\n    drift_detected: isDrifting,\n    high_error_rate: isHighError,\n    status: isDrifting || isHighError ? 'WARNING' : 'OK'\n  });\n  \n  if (isDrifting || isHighError) {\n    driftAlerts.push({\n      model: m.task_type,\n      issue: isDrifting ? `Confidence drift ${driftPct.toFixed(1)}% (threshold: ${DRIFT_THRESHOLD}%)` : `Error rate tinggi: ${errorRate.toFixed(1)}%`,\n      severity: Math.abs(driftPct) > DRIFT_THRESHOLD * 2 || errorRate > 20 ? 'CRITICAL' : 'WARNING'\n    });\n  }\n}\n\nconst overallHealth = driftAlerts.length === 0 ? 'HEALTHY' : \n                     driftAlerts.some(a => a.severity === 'CRITICAL') ? 'CRITICAL' : 'WARNING';\n\nreturn [{\n  json: {\n    overall_health: overallHealth,\n    drift_alerts: driftAlerts,\n    metrics_report: metricsReport,\n    models_checked: metricsReport.length,\n    alerts_count: driftAlerts.length,\n    check_timestamp: new Date().toISOString(),\n    drift_threshold_pct: DRIFT_THRESHOLD\n  }\n}];"
+      },
+      "id": "wf06-drift-detector",
+      "name": "🔍 Drift Detector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.alerts_count }}",
+              "rightValue": 0,
+              "operator": {"type": "number", "operation": "gt"}
+            }
+          ]
+        }
+      },
+      "id": "wf06-if-drift",
+      "name": "⚠️ Drift Detected?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [950, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/agrisensa/notify",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"notification_type\": \"mlops_drift_alert\",\n  \"channel\": \"telegram\",\n  \"subject\": \"🚨 AgriSensa MLOps Alert: Model Drift Detected\",\n  \"message\": \"**Status:** {{ $json.overall_health }}\\n\\n**Alerts:**\\n{{ $json.drift_alerts.map(a => '• ' + a.model + ': ' + a.issue + ' [' + a.severity + ']').join('\\n') }}\\n\\n**Waktu:** {{ $json.check_timestamp }}\",\n  \"triggered_by_workflow\": \"WF-06\",\n  \"payload\": {{ JSON.stringify($json) }}\n}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "wf06-notify",
+      "name": "📢 Notify Admin (Alert)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_MLFLOW_URL || 'http://localhost:5000' }}/api/2.0/mlflow/runs/log-metric",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"metrics\": {{ JSON.stringify($json.metrics_report.map((m, i) => ([{key: m.model + '_confidence', value: m.avg_confidence || 0, timestamp: Date.now(), step: i}, {key: m.model + '_success_rate', value: m.success_rate_pct || 0, timestamp: Date.now(), step: i}])).flat()) }}\n}",
+        "options": {"timeout": 10000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf06-mlflow-log",
+      "name": "📈 Log to MLflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO model_performance_metrics (model_name, metric_name, metric_value, baseline_value, drift_detected, drift_magnitude, total_predictions, period_start, period_end, created_at)\nSELECT\n  unnest(ARRAY[{{ $json.metrics_report.map(m => \"'\" + m.model + \"'\").join(',') }}]) AS model_name,\n  'confidence_avg' AS metric_name,\n  unnest(ARRAY[{{ $json.metrics_report.map(m => m.avg_confidence || 0).join(',') }}]) AS metric_value,\n  unnest(ARRAY[{{ $json.metrics_report.map(m => m.avg_confidence || 0).join(',') }}]) AS baseline_value,\n  unnest(ARRAY[{{ $json.metrics_report.map(m => m.drift_detected).join(',') }}]) AS drift_detected,\n  unnest(ARRAY[{{ $json.metrics_report.map(m => Math.abs(m.confidence_drift_pct || 0)).join(',') }}]) AS drift_magnitude,\n  unnest(ARRAY[{{ $json.metrics_report.map(m => m.total_predictions_24h).join(',') }}]) AS total_predictions,\n  NOW() - INTERVAL '24 hours' AS period_start,\n  NOW() AS period_end,\n  NOW() AS created_at;",
+        "additionalFields": {}
+      },
+      "id": "wf06-save-metrics",
+      "name": "💾 Save Metrics (PG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1200, 600],
+      "credentials": {"postgres": {"id": "agrisensa-postgres", "name": "AgriSensa PostgreSQL"}},
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle MLflow webhook events (model registration, retraining completion)\nconst body = $input.first().json.body || $input.first().json;\nconst eventType = body.event_type || body.type || 'unknown';\n\nreturn [{\n  json: {\n    event_type: eventType,\n    model_name: body.model_name,\n    model_version: body.model_version,\n    run_id: body.run_id,\n    status: body.status,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf06-mlflow-event",
+      "name": "🔔 MLflow Event Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 550]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"event_type\": \"{{ $json.event_type }}\",\n  \"processed\": true,\n  \"timestamp\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {"responseCode": 200}
+      },
+      "id": "wf06-respond",
+      "name": "📤 Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [700, 550]
+    }
+  ],
+  "connections": {
+    "⏰ Daily MLOps Check": {"main": [[{"node": "📊 Query ML Metrics (PG)", "type": "main", "index": 0}]]},
+    "📊 Query ML Metrics (PG)": {"main": [[{"node": "🔍 Drift Detector", "type": "main", "index": 0}]]},
+    "🔍 Drift Detector": {"main": [[{"node": "⚠️ Drift Detected?", "type": "main", "index": 0}]]},
+    "⚠️ Drift Detected?": {
+      "main": [
+        [
+          {"node": "📢 Notify Admin (Alert)", "type": "main", "index": 0},
+          {"node": "📈 Log to MLflow", "type": "main", "index": 0},
+          {"node": "💾 Save Metrics (PG)", "type": "main", "index": 0}
+        ],
+        [
+          {"node": "📈 Log to MLflow", "type": "main", "index": 0},
+          {"node": "💾 Save Metrics (PG)", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "🔧 MLOps Webhook": {"main": [[{"node": "🔔 MLflow Event Handler", "type": "main", "index": 0}]]},
+    "🔔 MLflow Event Handler": {"main": [[{"node": "📤 Respond to Webhook", "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "tags": ["agrisensa", "mlops", "monitoring", "drift-detection"],
+  "meta": {"description": "MLOps Monitor - daily confidence drift detection, MLflow logging, admin alerts on anomalies"}
+}

@@ -1,0 +1,135 @@
+{
+  "name": "WF-99: AgriSensa Global Error Handler & Dead Letter Queue (DLQ)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "wf99-error-trigger",
+      "name": "Global Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==========================================================================\n// AGRISENSA GLOBAL ERROR PARSER & DLQ CLASSIFIER\n// ==========================================================================\nconst inputItem = $input.first()?.json || {};\nconst execution = inputItem.execution || {};\nconst workflow = inputItem.workflow || {};\nconst errorObj = execution.error || inputItem.error || {};\n\nconst workflowId = workflow.id || 'wf_unknown';\nconst workflowName = workflow.name || 'AgriSensa Unnamed Workflow';\nconst nodeName = errorObj.node?.name || errorObj.node || 'Unknown Node';\nconst errorMessage = String(errorObj.message || errorObj.description || 'No specific error message provided');\nconst errorStack = String(errorObj.stack || '');\nconst executionId = String(execution.id || ('exec_' + Date.now()));\nconst executionMode = execution.mode || 'webhook';\nconst retryCount = execution.retryOf ? 1 : 0;\n\n// 1. Classify severity level\nlet severity = 'error';\nconst msgLower = errorMessage.toLowerCase();\nif (\n  msgLower.includes('timeout') ||\n  msgLower.includes('econnrefused') ||\n  msgLower.includes('503') ||\n  msgLower.includes('502') ||\n  msgLower.includes('database') ||\n  msgLower.includes('fatal')\n) {\n  severity = 'critical';\n} else if (\n  msgLower.includes('rate limit') ||\n  msgLower.includes('429') ||\n  msgLower.includes('quota') ||\n  msgLower.includes('warning')\n) {\n  severity = 'warning';\n}\n\n// 2. Safe string escaping for SQL insertion\nconst safeSql = (str) => String(str || '').replace(/'/g, \"''\").replace(/\\\\/g, \"\\\\\\\\\");\nconst cleanMessage = safeSql(errorMessage.substring(0, 1000));\nconst cleanStack = safeSql(errorStack.substring(0, 2000));\nconst cleanWorkflowName = safeSql(workflowName);\nconst cleanNodeName = safeSql(nodeName);\nconst inputDataJson = safeSql(JSON.stringify(execution.data?.resultData?.runData || {}));\n\n// 3. Build diagnostic alert messages\nconst emojiIcon = severity === 'critical' ? '🔴' : (severity === 'warning' ? '🟡' : '🟠');\nconst timestampStr = new Date().toISOString();\n\nconst telegramAlert = emojiIcon + ' *AGRISENSA SYSTEM ALERT*\\n\\n' +\n  '📌 *Workflow:* `' + workflowName + '`\\n' +\n  '⚙️ *Failed Node:* `' + nodeName + '`\\n' +\n  '⚠️ *Severity:* *' + severity.toUpperCase() + '*\\n' +\n  '🆔 *Execution ID:* `' + executionId + '`\\n' +\n  '⏱ *Time (UTC):* ' + timestampStr + '\\n\\n' +\n  '📝 *Error Summary:*\\n```\\n' +\n  errorMessage.substring(0, 400) + '\\n```\\n\\n' +\n  '💾 *Status:* Recorded to PostgreSQL `workflow_error_logs` DLQ.';\n\nconst webhookPayload = {\n  event: 'WORKFLOW_EXECUTION_FAILED',\n  workflow_id: workflowId,\n  workflow_name: workflowName,\n  execution_id: executionId,\n  node_name: nodeName,\n  severity: severity,\n  error_message: errorMessage,\n  error_stack: errorStack,\n  timestamp: timestampStr\n};\n\nreturn [{\n  json: {\n    workflow_id: workflowId,\n    workflow_name: workflowName,\n    workflow_name_sql: cleanWorkflowName,\n    execution_id: executionId,\n    node_name: nodeName,\n    node_name_sql: cleanNodeName,\n    error_message: errorMessage,\n    error_message_sql: cleanMessage,\n    error_stack: errorStack,\n    error_stack_sql: cleanStack,\n    input_data_sql: inputDataJson,\n    severity: severity,\n    execution_mode: executionMode,\n    retry_count: retryCount,\n    telegram_alert: telegramAlert,\n    webhook_payload: webhookPayload,\n    timestamp: timestampStr\n  }\n}];"
+      },
+      "id": "wf99-error-parser",
+      "name": "Error Diagnostic Parser",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO workflow_error_logs (\n    workflow_id,\n    workflow_name,\n    execution_id,\n    node_name,\n    error_message,\n    error_stack,\n    input_data,\n    severity,\n    alert_sent\n) VALUES (\n    '{{ $json.workflow_id }}',\n    '{{ $json.workflow_name_sql }}',\n    '{{ $json.execution_id }}',\n    '{{ $json.node_name_sql }}',\n    '{{ $json.error_message_sql }}',\n    '{{ $json.error_stack_sql }}',\n    '{{ $json.input_data_sql }}'::jsonb,\n    '{{ $json.severity }}',\n    true\n) RETURNING id;"
+      },
+      "id": "wf99-log-db",
+      "name": "Save to DLQ Table",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [640, 300],
+      "continueOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "agrisensa-postgres",
+          "name": "AgriSensa PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ADMIN_CHAT_ID || '123456789' }}",
+        "text": "={{ $('Error Diagnostic Parser').item.json.telegram_alert }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "wf99-telegram-alert",
+      "name": "Telegram Admin Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 200],
+      "continueOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "agrisensa-telegram",
+          "name": "AgriSensa Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://host.docker.internal:8000' }}/api/alerts/system",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Error Diagnostic Parser').item.json.webhook_payload) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "wf99-api-alert",
+      "name": "API Broadcast Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 420],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Global Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Diagnostic Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Diagnostic Parser": {
+      "main": [
+        [
+          {
+            "node": "Save to DLQ Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DLQ Table": {
+      "main": [
+        [
+          {
+            "node": "Telegram Admin Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "API Broadcast Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": [
+    "agrisensa",
+    "error-handler",
+    "dlq",
+    "monitoring",
+    "alert"
+  ],
+  "meta": {
+    "description": "WF-99: Global Error Handler & Dead Letter Queue (DLQ) - Captures execution failures across all workflows, persists audit diagnostics to PostgreSQL, and dispatches multi-channel alerts (Telegram & API Webhook)"
+  }
+}

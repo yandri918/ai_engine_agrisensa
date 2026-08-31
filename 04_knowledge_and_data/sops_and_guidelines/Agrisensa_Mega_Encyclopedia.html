@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriSensa Mega Encyclopedia - Master Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #065f46;
+            --secondary: #047857;
+            --accent: #f59e0b;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-page: #ffffff;
+            --bg-section: #f9fafb;
+        }
+
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-dark);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: #f3f4f6;
+        }
+
+        .page {
+            background: white;
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            padding: 2cm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+            box-sizing: border-box;
+            page-break-after: always;
+        }
+
+        @media print {
+            body { background: white; }
+            .page { margin: 0; box-shadow: none; }
+            .no-print { display: none; }
+        }
+
+        /* --- COVER PAGE --- */
+        .cover {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border: 10px solid var(--primary);
+            height: 100%;
+        }
+
+        .cover h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 48pt;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .cover h2 {
+            font-size: 24pt;
+            color: var(--secondary);
+            font-weight: 300;
+            margin-bottom: 50px;
+        }
+
+        .cover-footer {
+            margin-top: 100px;
+            font-size: 14pt;
+            color: var(--text-light);
+        }
+
+        /* --- TABLE OF CONTENTS --- */
+        .toc h2 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        .toc ul { list-style: none; padding: 0; }
+        .toc li { margin: 15px 0; border-bottom: 1px dashed #ddd; display: flex; justify-content: space-between; }
+
+        /* --- CONTENT STYLES --- */
+        h1, h2, h3 { color: var(--primary); font-family: 'Playfair Display', serif; }
+        .chapter-title { font-size: 28pt; margin-top: 0; border-left: 8px solid var(--accent); padding-left: 20px; }
+        
+        .box {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .box-info { background: #ecfdf5; border-left: 4px solid var(--secondary); }
+        .box-warning { background: #fffbeb; border-left: 4px solid var(--accent); }
+        .box-danger { background: #fef2f2; border-left: 4px solid #ef4444; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: var(--primary); color: white; }
+
+        .recipe-card {
+            background: var(--bg-section);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 30px;
+        }
+        .recipe-title { font-size: 18pt; font-weight: 700; color: var(--secondary); margin-bottom: 10px; }
+
+        .footer {
+            position: absolute;
+            bottom: 30px;
+            right: 50px;
+            font-size: 10pt;
+            color: var(--text-light);
+        }
+
+        /* --- UTILS --- */
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 99px; font-size: 10pt; font-weight: 600; margin-right: 5px; }
+        .badge-primary { background: var(--primary); color: white; }
+        .badge-accent { background: var(--accent); color: white; }
+
+        .btn-print {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--accent);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="javascript:window.print()" class="btn-print no-print">🖨️ Cetak / Simpan sebagai PDF</a>
+
+    <!-- PAGE 1: COVER -->
+    <div class="page">
+        <div class="cover">
+            <div style="font-size: 60pt; margin-bottom: 20px;">🌱</div>
+            <h1>AgriSensa</h1>
+            <h2>Mega Encyclopedia Pertanian</h2>
+            <div style="width: 100px; height: 4px; background: var(--accent); margin: 30px auto;"></div>
+            <p style="font-size: 16pt; max-width: 500px; margin: 0 auto;">
+                Panduan Terlengkap Master Nutrisi Tanaman, Formulasi Pupuk Organik, & Pengendalian Hama Alami
+            </p>
+            <div class="cover-footer">
+                <strong>Edisi Kolektor 2026</strong><br>
+                Produk Digital Premium AgriSensa
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE 2: TOC -->
+    <div class="page">
+        <div class="toc">
+            <h2>Daftar Isi</h2>
+            <ul>
+                <li><span>I. Dasar Intelijen Nutrisi & pH Tanah</span> <span>3</span></li>
+                <li><span>II. Ensiklopedia Pupuk Makro (NPK)</span> <span>5</span></li>
+                <li><span>III. Rahasia Nutrisi Makro Sekunder & Mikro</span> <span>8</span></li>
+                <li><span>IV. Masterclass Pupuk Organik & Hayati</span> <span>12</span></li>
+                <li><span>V. Panduan Pembuatan POC, MOL & ZPT Alami</span> <span>15</span></li>
+                <li><span>VI. Ensiklopedia Pestisida Nabati Modern</span> <span>18</span></li>
+                <li><span>VII. Matriks Aksi & Troubleshooting Hama</span> <span>21</span></li>
+                <li><span>VIII. Kalender Tanam Nasional & Prediksi Iklim</span> <span>23</span></li>
+                <li><span>IX. Panduan Ekstrem Budidaya Cabai (SOP Masterclass)</span> <span>26</span></li>
+                <li><span>X. Masterclass Budidaya Jamur Profesional</span> <span>29</span></li>
+            </ul>
+            <div class="box box-info" style="margin-top: 50px;">
+                <strong>Misi Kami:</strong> Membantu petani mencapai kemandirian pertanian melalui pengetahuan yang tepat, berkelanjutan, dan berbasis teknologi.
+            </div>
+        </div>
+        <div class="footer">Hal 2 | AgriSensa Encyclopedia</div>
+    </div>
+
+    <!-- PAGE 3: NUTRIENT INTEL -->
+    <div class="page">
+        <h1 class="chapter-title">I. Intelijen Nutrisi</h1>
+        <p>Pengetahuan tentang bagaimana unsur hara berinteraksi dalam tanah adalah kunci keberhasilan pemupukan.</p>
+        
+        <h3>1. Mulder's Chart (Interaksi Hara)</h3>
+        <p>Tidak semua pupuk bisa dicampur atau diaplikasikan bersamaan. Beberapa unsur saling menekan (antagonis):</p>
+        <ul>
+            <li><strong>K vs Mg:</strong> Kelebihan Kalium akan menyebabkan tanaman sulit menyerap Magnesium.</li>
+            <li><strong>P vs Zn:</strong> Kadar Fosfor yang sangat tinggi akan mengikat seng (Zinc), menyebabkan kerdil.</li>
+            <li><strong>Ca vs B:</strong> Kalsium yang berlebih dapat menghambat penyerapan Boron.</li>
+        </ul>
+
+        <h3>2. Skala pH & Ketersediaan Hara</h3>
+        <p>Tanah yang terlalu asam (pH < 5) atau terlalu basa (pH > 8) akan mengunci nutrisi meskipun Anda sudah memupuk dengan banyak.</p>
+        <table>
+            <tr><th>pH Tanah</th><th>Kondisi</th><th>Tindakan</th></tr>
+            <tr><td>4.0 - 5.5</td><td>Sangat Asam</td><td>Tambahkan Dolomit / Kapur Pertanian</td></tr>
+            <tr><td>6.0 - 7.0</td><td>Ideal</td><td>Lanjutkan pemeliharaan rutin</td></tr>
+            <tr><td>7.5 - 9.0</td><td>Alkalin</td><td>Tambahkan Sulfur / Belerang</td></tr>
+        </table>
+        
+        <div class="box box-warning">
+            <strong>Tips Ahli:</strong> Selalu cek pH tanah sebelum memulai musim tanam. pH yang tepat meningkatkan efisiensi pupuk hingga 50%.
+        </div>
+        <div class="footer">Hal 3 | AgriSensa Encyclopedia</div>
+    </div>
+
+    <!-- PAGE 4: PUPUK MAKRO -->
+    <div class="page">
+        <h1 class="chapter-title">II. Ensiklopedia Pupuk Makro</h1>
+        <p>Nutrisi utama yang dibutuhkan tanaman dalam jumlah besar (N, P, K).</p>
+
+        <div class="recipe-card">
+            <div class="recipe-title">Urea (46% Nitrogen)</div>
+            <p><strong>Fungsi:</strong> Pertumbuhan vegetatif (daun & batang). Membuat daun hijau royo-royo.</p>
+            <p><strong>Dosis:</strong> 200-300 kg/ha untuk padi.</p>
+            <div class="badge badge-primary">Fase Vegetatif</div>
+            <div class="badge badge-accent">Mudah Larut</div>
+        </div>
+
+        <div class="recipe-card">
+            <div class="recipe-title">SP-36 / TSP (Fosfor Tinggi)</div>
+            <p><strong>Fungsi:</strong> Pertumbuhan akar, pembentukan bunga, dan buah.</p>
+            <p><strong>Tips:</strong> Aplikasi saat tanam untuk hasil maksimal karena sifatnya slow-release.</p>
+        </div>
+
+        <div class="recipe-card">
+            <div class="recipe-title">KCl (60% Kalium)</div>
+            <p><strong>Fungsi:</strong> Kualitas hasil panen, ketahanan terhadap hama, dan bobot buah.</p>
+            <div class="badge badge-primary">Fase Generatif</div>
+        </div>
+
+        <div class="box box-info">
+            <strong>Formula NPK Seimbang:</strong> Gunakan NPK 16-16-16 untuk pertumbuhan yang rata di semua fase, sangat cocok untuk sayuran daun.
+        </div>
+        <div class="footer">Hal 4 | AgriSensa Encyclopedia</div>
+    </div>
+
+    <!-- PAGE 5: PESTISIDA NABATI (MEGA LIST) -->
+    <div class="page">
+        <h1 class="chapter-title">VI. Master Formula Pestisida Nabati</h1>
+        <p>Pengendalian hama tanpa residu kimia berbahaya. Aman untuk keluarga dan lingkungan.</p>
+
+        <div class="recipe-card">
+            <div class="recipe-title">🌿 Ekstrak Daun Mimba (The King)</div>
+            <p><strong>Target:</strong> Ulat, Kutu daun, Thrips, Tungau.</p>
+            <p><strong>Cara Buat:</strong> Tumbuk 1 kg daun mimba segar, rendam dalam 10L air selama 24 jam. Saring dan tambahkan 10ml sabun cair sebagai perekat.</p>
+        </div>
+
+        <div class="recipe-card">
+            <div class="recipe-title">🧄 Ekstrak Bawang Putih (Anti-Bakteri)</div>
+            <p><strong>Target:</strong> Jamur, Bakteri, Serangga penghisap.</p>
+            <p><strong>Cara Buat:</strong> Haluskan 500g bawang putih, campur dengan 10L air dan sedikit minyak goreng. Diamkan 24 jam.</p>
+        </div>
+
+        <div class="recipe-card">
+            <div class="recipe-title">🌶️ Ekstrak Cabai Rawit (Repellent)</div>
+            <p><strong>Target:</strong> Belalang, Ulat, Tikus (pengusir).</p>
+            <p><strong>Peringatan:</strong> Sangat iritan. Gunakan sarung tangan dan masker saat pembuatan.</p>
+        </div>
+
+        <div class="box box-danger">
+            <strong>⚠️ Peraturan Utama:</strong> Jangan pernah mengaplikasikan pestisida nabati di siang hari bolong. Sinar UV akan merusak bahan aktif alami dengan sangat cepat.
+        </div>
+        <div class="footer">Hal 18 | AgriSensa Encyclopedia</div>
+    </div>
+
+    <!-- PAGE 7: KALENDER TANAM -->
+    <div class="page">
+        <h1 class="chapter-title">VIII. Kalender Tanam Nasional</h1>
+        <p>Strategi waktu tanam berdasarkan wilayah dan ketinggian tempat untuk meminimalkan risiko gagal panen.</p>
+
+        <h3>1. Strategi Berdasarkan Wilayah (Nasional)</h3>
+        <table>
+            <tr><th>Wilayah</th><th>Musim Kemarau (Ideal)</th><th>Musim Hujan (Risiko)</th></tr>
+            <tr><td><strong>Jawa</strong></td><td>April - Mei</td><td>Oktober - November</td></tr>
+            <tr><td><strong>Sumatera</strong></td><td>Mei - Agustus</td><td>Greenhouse Dianjurkan</td></tr>
+            <tr><td><strong>Sulawesi</strong></td><td>Mei - Juni</td><td>Januari - Maret</td></tr>
+        </table>
+
+        <h3>2. Panduan Ketinggian Tempat (mdpl)</h3>
+        <div class="box box-info">
+            <strong>Dataran Rendah (0-700 mdpl):</strong> Suhu 25-32°C. Fokus pada pengendalian hama aktif (Thrips). Cocok untuk Cabai Rawit & Keriting.
+        </div>
+        <div class="box box-warning">
+            <strong>Dataran Tinggi (>700 mdpl):</strong> Suhu 20-25°C. Risiko tinggi jamur karena kelembaban. Fokus pada drainase dan fungisida organik.
+        </div>
+
+        <h3>3. Timeline Cultivation (Master 120 Hari)</h3>
+        <ul>
+            <li><strong>Minggu 1-4:</strong> Pembibitan & Pengerasan (Hardening).</li>
+            <li><strong>Minggu 4:</strong> Penanaman & Pemasangan Ajir.</li>
+            <li><strong>Minggu 5-8:</strong> Fase Vegetatif (Fokus Nitrogen & Akar).</li>
+            <li><strong>Minggu 9-12:</strong> Fase Generatif (Fokus Kalium & Bunga).</li>
+            <li><strong>Minggu 13-16:</strong> Masa Panen Emas.</li>
+        </ul>
+        <div class="footer">Hal 23 | AgriSensa Encyclopedia</div>
+    </div>
+
+    <!-- PAGE 8: PANDUAN EKSTREM CABAI -->
+    <div class="page">
+        <h1 class="chapter-title">IX. Panduan Ekstrem Budidaya Cabai</h1>
+        <p>Standard Operating Procedure (SOP) tingkat tinggi untuk hasil panen 2x lipat dari rata-rata nasional.</p>
+
+        <div class="recipe-card">
+            <div class="recipe-title">🚀 Rahasia Persiapan Lahan "Super-Charged"</div>
+            <ul>
+                <li>Bajak tanah sedalam 40cm (Akar butuh ruang napas).</li>
+                <li>Aplikasi 20 Ton/Ha Pupuk Kandang Matang.</li>
+                <li>Dolomit wajib jika pH di bawah 6.0.</li>
+                <li>Pasang Mulsa Hitam-Perak (Hitam ke bawah, Perak ke atas untuk pantul cahaya & usir kutu).</li>
+            </ul>
+        </div>
+
+        <div class="recipe-card">
+            <div class="recipe-title">⚡ High-Performance Maintenance</div>
+            <p><strong>Teknik Pewiwilan:</strong> Buang tunas air di bawah cabang Y pada pagi hari agar nutrisi terfokus ke buah utama.</p>
+            <p><strong>Irigasi Drip:</strong> Jaga kelembaban konstan di 60-70%. Jangan biarkan tanah pecah-pecah atau terlalu becek.</p>
+        </div>
+
+        <div class="box box-danger">
+            <strong>Pro-Level Harvesting:</strong> Jangan petik cabai saat matahari terik. Panenlah pada jam 07:00 - 10:00 untuk menjaga bobot dan kesegaran sel tanaman.
+        </div>
+
+        <h3>Checklist Keberhasilan</h3>
+        <ul style="list-style: none;">
+            <li>☐ Benih Hibrida F1 / Benih Organik Bersertifikat</li>
+            <li>☐ Jarak Tanam Presisi (60cm x 70cm)</li>
+            <li>☐ Jadwal Semprot Preventif Mingguan</li>
+            <li>☐ Drainase Sempurna (Bedengan Tinggi)</li>
+        </ul>
+        <div class="footer">Hal 26 | AgriSensa Encyclopedia</div>
+    </div>
+
+    <!-- PAGE 9: BUDIDAYA JAMUR -->
+    <div class="page">
+        <h1 class="chapter-title">X. Masterclass Budidaya Jamur</h1>
+        <p>Panduan hulu ke hilir untuk budidaya Jamur Tiram skala industri dengan sistem kontrol iklim yang presisi.</p>
+
+        <h3>1. Formulasi Media Tanam (Baglog) Premium</h3>
+        <p>Nutrisi yang tepat menentukan berat dan jumlah "flush" (panenan) per baglog.</p>
+        <table>
+            <tr><th>Bahan</th><th>Komposisi (Skala 100kg)</th><th>Fungsi Utama</th></tr>
+            <tr><td><strong>Serbuk Gergaji</strong></td><td>100 kg</td><td>Substrat/Media Serat</td></tr>
+            <tr><td><strong>Bekatul / Dedak</strong></td><td>15 - 20 kg</td><td>Sumber Karbohidrat & Nitrogen</td></tr>
+            <tr><td><strong>Kapur (CaCO3)</strong></td><td>1 - 3 kg</td><td>Pengatur pH Tanah</td></tr>
+            <tr><td><strong>Gypsum (CaSO4)</strong></td><td>0.5 - 1 kg</td><td>Kepadatan & Mineral</td></tr>
+        </table>
+
+        <h3>2. Standar Sterilisasi Industri</h3>
+        <div class="box box-danger">
+            <strong>Critical Point:</strong> Sterilisasi harus dilakukan pada suhu stabil 100°C selama minimal 6-10 jam (tergantung kapasitas steamer) untuk membunuh spora liar.
+        </div>
+
+        <h3>3. Manajemen Mikro-Klimat (Kumbung)</h3>
+        <ul>
+            <li><strong>Fase Inkubasi:</strong> Suhu 22-28°C. Gelap total untuk mempercepat rambatan miselium.</li>
+            <li><strong>Fase Produksi:</strong> Suhu 20-28°C dengan Kelembaban (RH) 80-90%.</li>
+            <li><strong>Sirkulasi Udara:</strong> Wajib ada pertukaran O2 untuk mencegah tubuh buah "kriting" atau kecil karena kelebihan CO2.</li>
+        </ul>
+
+        <div class="box box-info">
+            <strong>Tips Profit:</strong> Gunakan mist maker atau nozzle kabut otomatis yang terhubung dengan sensor kelembaban untuk menjaga RH 85% secara konstan tanpa membuat baglog terlalu basah.
+        </div>
+        <div class="footer">Hal 29 | AgriSensa Encyclopedia</div>
+    </div>
+
+    <!-- PAGE 10: CLOSING -->
+    <div class="page">
+        <div style="text-align: center; margin-top: 200px;">
+            <div style="font-size: 80pt; margin-bottom: 20px;">🏆</div>
+            <h1 style="font-size: 36pt;">Selamat Menjadi Petani Modern!</h1>
+            <p style="font-size: 14pt; color: var(--text-light); max-width: 600px; margin: 0 auto;">
+                Dengan pengetahuan ini, Anda memiliki kekuatan untuk membangun sistem pertanian yang produktif dan lestari. 
+            </p>
+            
+            <div style="margin-top: 100px; padding: 40px; border: 2px dashed var(--primary); border-radius: 20px;">
+                <h3>Dukungan Lebih Lanjut</h3>
+                <p>Gunakan Portal AgriSensa untuk kalkulasi kebutuhan lahan Anda secara real-time.</p>
+                <div style="font-weight: bold; font-size: 18pt; color: var(--primary);">[Link Dashboard AgriSensa Anda]</div>
+            </div>
+            
+            <div style="margin-top: 50px; font-style: italic; color: var(--text-light);">
+                "Bertani adalah pengabdian pada alam."
+            </div>
+        </div>
+        <div class="footer">© 2026 AgriSensa Premium Digital</div>
+    </div>
+
+</body>
+</html>

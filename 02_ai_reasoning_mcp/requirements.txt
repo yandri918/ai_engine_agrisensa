@@ -1,0 +1,38 @@
+# AgriSensa Advanced AI Engine & MCP Dependencies
+# ==================================================
+# Install all: pip install -r requirements.txt
+
+# Core Framework
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+python-dotenv>=1.0.0
+httpx>=0.27.0
+
+# Numerical Computing & Statistics
+numpy>=1.26.0
+scipy>=1.13.0
+pandas>=2.2.0
+
+# ML & Time Series Forecasting
+scikit-learn>=1.5.0
+statsmodels>=0.14.0
+
+# PDF & Visualizations
+reportlab>=4.2.0          # High quality PDF engine
+matplotlib>=3.9.0         # Embedded PDF charts
+Pillow>=10.3.0
+
+# MCP Tool 1: DuckDuckGo Search (Free, no API key required)
+duckduckgo-search>=6.2.0
+
+# MCP Tool 2: Web Scraping
+beautifulsoup4>=4.12.0
+lxml>=5.2.0
+# firecrawl-py>=1.4.0      # Optional: uncomment if you have a FIRECRAWL_API_KEY
+
+# MCP Tool 3: Document Parsing (PDF, Word, Excel, CSV)
+PyMuPDF>=1.24.0           # Fast PDF extraction (fitz)
+pypdf>=4.2.0              # Secondary PDF reader fallback
+python-docx>=1.1.0        # Word document parsing (.docx)
+openpyxl>=3.1.0           # Excel spreadsheet parsing (.xlsx)

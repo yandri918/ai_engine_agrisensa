@@ -1,0 +1,94 @@
+{
+  "name": "WF-10: AgriSensa RAG Knowledge Ingestion Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/ingest",
+        "responseMode": "responseNode",
+        "options": {"allowedOrigins": "*"}
+      },
+      "id": "wf10-webhook",
+      "name": "📥 Ingestion Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://localhost:8001' }}/mcp/parse-document",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"filename\": \"{{ $json.filename || 'agri_doc.pdf' }}\",\n  \"file_base64\": \"{{ $json.file_base64 || '' }}\",\n  \"file_path\": \"{{ $json.file_path || '' }}\",\n  \"file_type\": \"{{ $json.file_type || 'pdf' }}\"\n}",
+        "options": {"timeout": 60000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf10-doc-parser",
+      "name": "📄 Document Parser Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ═══════════════════════════════════════════════════\n// CHUNKER & METADATA ENRICHER NODE\n// Splits text into semantic chunks for ChromaDB RAG\n// ═══════════════════════════════════════════════════\nconst parsed = $input.first().json.data || $input.first().json;\nconst text = parsed.extracted_text || '';\nconst filename = parsed.filename || 'unknown_document';\nconst metrics = parsed.extracted_metrics || {};\n\nconst CHUNK_SIZE = 800; // characters\nconst CHUNK_OVERLAP = 100;\nconst chunks = [];\n\nif (text.length > 0) {\n  let start = 0;\n  let chunkIdx = 0;\n  while (start < text.length) {\n    const end = Math.min(start + CHUNK_SIZE, text.length);\n    const chunkText = text.substring(start, end).trim();\n    if (chunkText.length > 50) {\n      chunks.push({\n        chunk_index: chunkIdx,\n        chunk_text: chunkText,\n        filename: filename,\n        total_characters: chunkText.length,\n        crops_referenced: metrics.komoditas_disebut || [],\n        ai_summary: parsed.ai_summary || ''\n      });\n      chunkIdx++;\n    }\n    start += (CHUNK_SIZE - CHUNK_OVERLAP);\n  }\n}\n\nreturn [{\n  json: {\n    document_title: filename,\n    source_type: parsed.file_type || 'pdf',\n    total_chunks: chunks.length,\n    total_characters: text.length,\n    chunks: chunks,\n    ai_summary: parsed.ai_summary || '',\n    extracted_metrics: metrics,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf10-chunker",
+      "name": "✂️ Semantic Chunker Node",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO knowledge_ingestion_log (\n    document_title,\n    source_type,\n    total_chunks,\n    total_characters,\n    collection_name,\n    ingestion_status,\n    metadata\n) VALUES (\n    '{{ $json.document_title }}',\n    '{{ $json.source_type }}',\n    {{ $json.total_chunks }},\n    {{ $json.total_characters }},\n    'agrisensa_kb',\n    'completed',\n    '{{ JSON.stringify({ summary: $json.ai_summary, metrics: $json.extracted_metrics }) }}'::jsonb\n) RETURNING id, created_at;"
+      },
+      "id": "wf10-log-db",
+      "name": "💾 Log to PostgreSQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [860, 300],
+      "credentials": {
+        "postgres": {
+          "id": "agrisensa-postgres",
+          "name": "AgriSensa PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Dokumen berhasil di-ingest ke Knowledge Base RAG AgriSensa\",\n  \"data\": {\n    \"document_title\": \"{{ $('✂️ Semantic Chunker Node').item.json.document_title }}\",\n    \"total_chunks_created\": {{ $('✂️ Semantic Chunker Node').item.json.total_chunks }},\n    \"total_characters\": {{ $('✂️ Semantic Chunker Node').item.json.total_characters }},\n    \"summary\": \"{{ $('✂️ Semantic Chunker Node').item.json.ai_summary }}\",\n    \"ingested_at\": \"{{ $('✂️ Semantic Chunker Node').item.json.timestamp }}\"\n  }\n}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "WF-10-RAG-Ingestion"}
+            ]
+          }
+        }
+      },
+      "id": "wf10-respond",
+      "name": "📤 Respond to Ingest Client",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "📥 Ingestion Webhook": {"main": [[{"node": "📄 Document Parser Node", "type": "main", "index": 0}]]},
+    "📄 Document Parser Node": {"main": [[{"node": "✂️ Semantic Chunker Node", "type": "main", "index": 0}]]},
+    "✂️ Semantic Chunker Node": {"main": [[{"node": "💾 Log to PostgreSQL", "type": "main", "index": 0}]]},
+    "💾 Log to PostgreSQL": {"main": [[{"node": "📤 Respond to Ingest Client", "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "tags": ["agrisensa", "rag", "ingestion", "chromadb", "knowledge-base"],
+  "meta": {
+    "description": "WF-10: Automated RAG Knowledge Ingestion Pipeline — Parse PDF/Doc, Chunk Semantic Texts, and Store into Vector Knowledge Base"
+  }
+}

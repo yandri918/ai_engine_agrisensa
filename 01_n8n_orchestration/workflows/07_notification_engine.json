@@ -1,0 +1,194 @@
+{
+  "name": "WF-07: Notification & Alert Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/notify",
+        "responseMode": "responseNode",
+        "options": {"allowedOrigins": "*"}
+      },
+      "id": "wf07-webhook",
+      "name": "🔔 Notification Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and normalize notification request\nconst body = $input.first().json.body || $input.first().json;\n\nconst channel = body.channel || 'telegram';\nconst validChannels = ['telegram', 'email', 'push', 'webhook'];\n\nif (!validChannels.includes(channel)) {\n  throw new Error(`Channel '${channel}' tidak valid. Valid: ${validChannels.join(', ')}`);\n}\n\nif (!body.message && !body.subject) {\n  throw new Error('Field message atau subject wajib disertakan');\n}\n\nreturn [{\n  json: {\n    notification_type: body.notification_type || 'general',\n    channel: channel,\n    recipient: body.recipient || null,\n    subject: body.subject || 'AgriSensa Notification',\n    message: body.message || body.subject || '',\n    payload: body.payload || {},\n    triggered_by: body.triggered_by_workflow || 'manual',\n    notification_id: `notif_${Date.now()}_${Math.random().toString(36).substr(2,6)}`\n  }\n}];"
+      },
+      "id": "wf07-validator",
+      "name": "✅ Notification Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.channel }}", "rightValue": "telegram", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Telegram"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.channel }}", "rightValue": "email", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Email"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.channel }}", "rightValue": "push", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Push"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.channel }}", "rightValue": "webhook", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Webhook"
+            }
+          ]
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "wf07-channel-switch",
+      "name": "📡 Channel Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"chat_id\": \"{{ $json.recipient || $env.TELEGRAM_ADMIN_CHAT_ID }}\",\n  \"text\": \"🌾 *AgriSensa AI Engine*\\n\\n{{ $json.message }}\",\n  \"parse_mode\": \"Markdown\",\n  \"disable_web_page_preview\": true\n}",
+        "options": {"timeout": 10000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf07-telegram",
+      "name": "📱 Telegram Bot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_USER }}",
+        "toEmail": "={{ $json.recipient || $env.ADMIN_EMAIL }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "html": "=<!DOCTYPE html>\n<html lang='id'>\n<head>\n  <meta charset='UTF-8'>\n  <style>\n    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }\n    .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }\n    .header { background: linear-gradient(135deg, #16a34a, #15803d); color: white; padding: 24px; text-align: center; }\n    .header h1 { margin: 0; font-size: 24px; }\n    .header p { margin: 8px 0 0; opacity: 0.9; font-size: 14px; }\n    .body { padding: 24px; color: #333; }\n    .body h2 { color: #15803d; margin-top: 0; }\n    .message { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 16px; border-radius: 4px; white-space: pre-wrap; }\n    .footer { text-align: center; padding: 16px; background: #f9f9f9; color: #888; font-size: 12px; }\n    .badge { display: inline-block; background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: bold; }\n  </style>\n</head>\n<body>\n  <div class='container'>\n    <div class='header'>\n      <h1>🌾 AgriSensa AI Engine</h1>\n      <p>Notifikasi Sistem</p>\n    </div>\n    <div class='body'>\n      <h2>{{ $json.subject }}</h2>\n      <span class='badge'>{{ $json.notification_type }}</span>\n      <div class='message' style='margin-top:16px'>{{ $json.message }}</div>\n      <p style='font-size:12px;color:#888;margin-top:16px'>Dikirim oleh: WF-{{ $json.triggered_by }} | {{ new Date().toLocaleString(\"id-ID\") }}</p>\n    </div>\n    <div class='footer'>AgriSensa — Platform AI Pertanian Indonesia 🇮🇩</div>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "wf07-email",
+      "name": "📧 Send Email (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [900, 380],
+      "credentials": {"smtp": {"id": "agrisensa-smtp", "name": "AgriSensa SMTP"}}
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fcm.googleapis.com/fcm/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Authorization", "value": "=key={{ $env.FIREBASE_SERVER_KEY }}"}
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"notification\": {\n    \"title\": \"🌾 AgriSensa\",\n    \"body\": \"{{ $json.subject }}\",\n    \"icon\": \"/icons/icon-192x192.png\"\n  },\n  \"data\": {\n    \"type\": \"{{ $json.notification_type }}\",\n    \"message\": \"{{ $json.message }}\"\n  },\n  \"topic\": \"agrisensa_alerts\"\n}",
+        "options": {"timeout": 10000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf07-push",
+      "name": "📲 Firebase FCM Push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.recipient || 'https://httpbin.org/post' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "X-AgriSensa-Webhook", "value": "true"},
+            {"name": "X-AgriSensa-Event", "value": "={{ $json.notification_type }}"}
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {"timeout": 10000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf07-webhook-call",
+      "name": "🔗 External Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 740]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all notification results\nconst items = $input.all();\nconst validatorData = $('✅ Notification Validator').item.json;\n\nconst results = items.map(item => ({\n  channel: validatorData.channel,\n  status: item.json.ok || item.json.success || item.json.message_id ? 'sent' : 'error',\n  response: item.json\n}));\n\nreturn [{\n  json: {\n    notification_id: validatorData.notification_id,\n    channel: validatorData.channel,\n    notification_type: validatorData.notification_type,\n    subject: validatorData.subject,\n    message: validatorData.message,\n    triggered_by: validatorData.triggered_by,\n    results: results,\n    overall_status: results.every(r => r.status === 'sent') ? 'sent' : 'partial_failure'\n  }\n}];"
+      },
+      "id": "wf07-merge-results",
+      "name": "🔗 Merge Send Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1150, 470]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications_log (notification_type, channel, recipient, subject, message, payload, status, triggered_by_workflow, created_at)\nVALUES (\n  '{{ $json.notification_type }}',\n  '{{ $json.channel }}',\n  {{ $('✅ Notification Validator').item.json.recipient ? \"'\" + $('✅ Notification Validator').item.json.recipient + \"'\" : 'NULL' }},\n  '{{ $json.subject.replace(/'/g, \"''\") }}',\n  '{{ $json.message.replace(/'/g, \"''\").substr(0,2000) }}',\n  '{{ JSON.stringify($json.results).replace(/'/g, \"''\") }}',\n  '{{ $json.overall_status }}',\n  '{{ $json.triggered_by }}',\n  NOW()\n);",
+        "additionalFields": {}
+      },
+      "id": "wf07-save-log",
+      "name": "💾 Save Notification Log (PG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1380, 470],
+      "credentials": {"postgres": {"id": "agrisensa-postgres", "name": "AgriSensa PostgreSQL"}},
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({success: true, notification_id: $json.notification_id, status: $json.overall_status, channel: $json.channel}) }}",
+        "options": {"responseCode": 200, "responseHeaders": {"values": [{"name": "Content-Type", "value": "application/json"}, {"name": "X-AgriSensa-Engine", "value": "WF-07-Notifications"}]}}
+      },
+      "id": "wf07-respond",
+      "name": "📤 Respond to Caller",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1600, 470]
+    }
+  ],
+  "connections": {
+    "🔔 Notification Webhook": {"main": [[{"node": "✅ Notification Validator", "type": "main", "index": 0}]]},
+    "✅ Notification Validator": {"main": [[{"node": "📡 Channel Router", "type": "main", "index": 0}]]},
+    "📡 Channel Router": {
+      "main": [
+        [{"node": "📱 Telegram Bot", "type": "main", "index": 0}],
+        [{"node": "📧 Send Email (SMTP)", "type": "main", "index": 0}],
+        [{"node": "📲 Firebase FCM Push", "type": "main", "index": 0}],
+        [{"node": "🔗 External Webhook", "type": "main", "index": 0}]
+      ]
+    },
+    "📱 Telegram Bot": {"main": [[{"node": "🔗 Merge Send Results", "type": "main", "index": 0}]]},
+    "📧 Send Email (SMTP)": {"main": [[{"node": "🔗 Merge Send Results", "type": "main", "index": 0}]]},
+    "📲 Firebase FCM Push": {"main": [[{"node": "🔗 Merge Send Results", "type": "main", "index": 0}]]},
+    "🔗 External Webhook": {"main": [[{"node": "🔗 Merge Send Results", "type": "main", "index": 0}]]},
+    "🔗 Merge Send Results": {"main": [[{"node": "💾 Save Notification Log (PG)", "type": "main", "index": 0}]]},
+    "💾 Save Notification Log (PG)": {"main": [[{"node": "📤 Respond to Caller", "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "tags": ["agrisensa", "notifications", "telegram", "email", "push"],
+  "meta": {"description": "Notification & Alert Engine - multi-channel: Telegram, Email (SMTP), Firebase FCM Push, External Webhook"}
+}

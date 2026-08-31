@@ -1,0 +1,190 @@
+{
+  "name": "WF-04: Market Intelligence Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {"interval": [{"field": "hours", "hoursInterval": 1}]}
+      },
+      "id": "wf04-schedule",
+      "name": "⏰ Hourly Price Fetch",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/market",
+        "responseMode": "responseNode",
+        "options": {"allowedOrigins": "*"}
+      },
+      "id": "wf04-webhook",
+      "name": "💰 Market Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 550]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://panelharga.badanpangan.go.id/api/harga-komoditas",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Accept", "value": "application/json"},
+            {"name": "User-Agent", "value": "AgriSensa-Market-Intelligence/2.0"}
+          ]
+        },
+        "options": {"timeout": 15000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf04-bapanas-fetch",
+      "name": "📡 Fetch BAPANAS Prices",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform BAPANAS API response to standardized format\nconst raw = $input.first().json;\n\n// Handle different response structures\nconst priceList = raw.data || raw.items || raw || [];\nconst today = new Date().toISOString().split('T')[0];\n\nconst standardized = Array.isArray(priceList) ? priceList.map(item => ({\n  commodity_name: item.nama_komoditas || item.commodity || item.name || 'unknown',\n  commodity_code: item.kode || item.code || null,\n  price: parseFloat(item.harga || item.price || item.nilai || 0),\n  unit: item.satuan || item.unit || 'kg',\n  province: item.provinsi || item.province || 'Nasional',\n  market_name: item.pasar || item.market || 'Rata-rata Nasional',\n  price_date: item.tanggal || item.date || today,\n  source: 'BAPANAS'\n})).filter(p => p.commodity_name !== 'unknown' && p.price > 0)\n: [];\n\nreturn standardized.map(item => ({ json: item }));"
+      },
+      "id": "wf04-transform",
+      "name": "🔄 Data Transformer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate price changes vs previous day\nconst items = $input.all();\n// Note: In production, query previous prices from PostgreSQL\n// For now, attach change calculation placeholder\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    prev_price: null, // Will be filled by PG query\n    change_pct: null  // Calculated after DB upsert\n  }\n}));"
+      },
+      "id": "wf04-change-calc",
+      "name": "📈 Price Change Calculator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO commodity_prices (commodity_name, commodity_code, price, unit, province, market_name, source, price_date)\nVALUES (\n  '{{ $json.commodity_name.replace(/'/g, \"''\") }}',\n  {{ $json.commodity_code ? \"'\" + $json.commodity_code + \"'\" : 'NULL' }},\n  {{ $json.price }},\n  '{{ $json.unit }}',\n  '{{ ($json.province || 'Nasional').replace(/'/g, \"''\") }}',\n  '{{ ($json.market_name || 'Rata-rata Nasional').replace(/'/g, \"''\") }}',\n  '{{ $json.source }}',\n  '{{ $json.price_date }}'\n)\nON CONFLICT (commodity_name, province, price_date)\nDO UPDATE SET price = EXCLUDED.price, market_name = EXCLUDED.market_name;",
+        "additionalFields": {}
+      },
+      "id": "wf04-save-prices",
+      "name": "💾 Save Prices (PG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1120, 200],
+      "credentials": {"postgres": {"id": "agrisensa-postgres", "name": "AgriSensa PostgreSQL"}},
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ Math.abs($json.change_pct || 0) }}",
+              "rightValue": "={{ $env.PRICE_CHANGE_ALERT_THRESHOLD || 5 }}",
+              "operator": {"type": "number", "operation": "gte"}
+            }
+          ]
+        }
+      },
+      "id": "wf04-alert-check",
+      "name": "⚠️ Alert Threshold?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/agrisensa/notify",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"notification_type\": \"price_alert\",\n  \"channel\": \"telegram\",\n  \"subject\": \"⚠️ Alert Harga {{ $json.commodity_name }}\",\n  \"message\": \"Harga {{ $json.commodity_name }} berubah {{ $json.change_pct ? $json.change_pct.toFixed(1) : 'N/A' }}%\\nHarga baru: Rp {{ new Intl.NumberFormat('id-ID').format($json.price) }}/{{ $json.unit }}\\nProvinsi: {{ $json.province }}\",\n  \"triggered_by_workflow\": \"WF-04\"\n}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "wf04-send-alert",
+      "name": "📢 Trigger Price Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle on-demand market query\nconst body = $input.first().json.body || $input.first().json;\nconst commodity = body.commodity || null;\nconst province = body.province || null;\nconst days = parseInt(body.days || 30);\n\nreturn [{\n  json: {\n    commodity: commodity,\n    province: province,\n    days: Math.min(days, 365),\n    include_prediction: body.include_prediction || true,\n    request_id: `mkt_${Date.now()}`\n  }\n}];"
+      },
+      "id": "wf04-query-parser",
+      "name": "🔍 Query Parser",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 550]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  commodity_name,\n  province,\n  price,\n  change_pct,\n  price_date,\n  source\nFROM commodity_prices\nWHERE\n  ({{ $json.commodity ? \"'\" + $json.commodity + \"' ILIKE '%' || commodity_name || '%' OR commodity_name ILIKE '%' || '\" + $json.commodity + \"' || '%'\" : 'TRUE' }})\n  AND price_date >= CURRENT_DATE - INTERVAL '{{ $json.days }} days'\nORDER BY commodity_name, price_date DESC\nLIMIT 500;",
+        "additionalFields": {}
+      },
+      "id": "wf04-query-prices",
+      "name": "📊 Query Price History (PG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [680, 550],
+      "credentials": {"postgres": {"id": "agrisensa-postgres", "name": "AgriSensa PostgreSQL"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Linear regression price prediction\nconst rows = $input.all();\nconst queryData = $('🔍 Query Parser').item.json;\n\n// Group by commodity\nconst commodityGroups = {};\nfor (const row of rows) {\n  const name = row.json.commodity_name;\n  if (!commodityGroups[name]) commodityGroups[name] = [];\n  commodityGroups[name].push({\n    date: new Date(row.json.price_date).getTime(),\n    price: parseFloat(row.json.price)\n  });\n}\n\n// Linear regression per commodity\nconst predictions = {};\nfor (const [commodity, dataPoints] of Object.entries(commodityGroups)) {\n  const sorted = dataPoints.sort((a, b) => a.date - b.date);\n  const n = sorted.length;\n  if (n < 2) continue;\n\n  const xMean = sorted.reduce((s, d) => s + d.date, 0) / n;\n  const yMean = sorted.reduce((s, d) => s + d.price, 0) / n;\n\n  let numerator = 0, denominator = 0;\n  for (const d of sorted) {\n    numerator += (d.date - xMean) * (d.price - yMean);\n    denominator += (d.date - xMean) ** 2;\n  }\n\n  const slope = denominator !== 0 ? numerator / denominator : 0;\n  const intercept = yMean - slope * xMean;\n\n  // Predict next 7 days\n  const futurePrices = [];\n  const now = Date.now();\n  for (let i = 1; i <= 7; i++) {\n    const futureDate = now + i * 86400000;\n    futurePrices.push({\n      date: new Date(futureDate).toISOString().split('T')[0],\n      predicted_price: Math.max(0, Math.round(slope * futureDate + intercept))\n    });\n  }\n\n  const trend = slope > 0 ? 'naik' : slope < 0 ? 'turun' : 'stabil';\n  predictions[commodity] = {\n    current_price: sorted[sorted.length - 1].price,\n    trend: trend,\n    slope_per_day: Math.round(slope * 86400000),\n    forecast_7_days: futurePrices,\n    data_points: n\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    query: queryData,\n    market_data: commodityGroups,\n    predictions: predictions,\n    commodities_count: Object.keys(predictions).length,\n    metadata: {\n      engine: 'agrisensa-market-v2',\n      algorithm: 'linear_regression',\n      workflow: 'WF-04',\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "wf04-predictor",
+      "name": "📉 Price Trend Predictor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 550]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "WF-04-Market-Intelligence"}
+            ]
+          }
+        }
+      },
+      "id": "wf04-respond",
+      "name": "📤 Respond to Client",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 550]
+    }
+  ],
+  "connections": {
+    "⏰ Hourly Price Fetch": {"main": [[{"node": "📡 Fetch BAPANAS Prices", "type": "main", "index": 0}]]},
+    "📡 Fetch BAPANAS Prices": {"main": [[{"node": "🔄 Data Transformer", "type": "main", "index": 0}]]},
+    "🔄 Data Transformer": {"main": [[{"node": "📈 Price Change Calculator", "type": "main", "index": 0}]]},
+    "📈 Price Change Calculator": {"main": [[{"node": "💾 Save Prices (PG)", "type": "main", "index": 0}]]},
+    "💾 Save Prices (PG)": {"main": [[{"node": "⚠️ Alert Threshold?", "type": "main", "index": 0}]]},
+    "⚠️ Alert Threshold?": {
+      "main": [
+        [{"node": "📢 Trigger Price Alert", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "💰 Market Webhook": {"main": [[{"node": "🔍 Query Parser", "type": "main", "index": 0}]]},
+    "🔍 Query Parser": {"main": [[{"node": "📊 Query Price History (PG)", "type": "main", "index": 0}]]},
+    "📊 Query Price History (PG)": {"main": [[{"node": "📉 Price Trend Predictor", "type": "main", "index": 0}]]},
+    "📉 Price Trend Predictor": {"main": [[{"node": "📤 Respond to Client", "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "tags": ["agrisensa", "market", "prices", "prediction"],
+  "meta": {"description": "Market Intelligence Engine - hourly BAPANAS price fetch, linear regression prediction, price alerts"}
+}

@@ -1,0 +1,312 @@
+{
+  "name": "WF-09: AgriSensa MCP Tools Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/mcp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wf09-webhook",
+      "name": "MCP Webhook Node",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "agrisensa-mcp-v1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==========================================================================\n// MCP AGENT NODE - Identify Tool Intent & Prepare Payload\n// ==========================================================================\nconst body = $input.first()?.json?.body || $input.first()?.json || {};\n\nlet tool = body.tool || body.action || 'auto';\nconst query = body.query || body.search || '';\nconst url = body.url || body.link || '';\nconst filename = body.filename || body.file_name || '';\nconst file_base64 = body.file_base64 || body.base64 || '';\nconst chart_type = body.chart_type || body.type || 'soil_npk';\nconst chart_format = body.format || 'echarts';\n\n// Auto-detect tool if not explicitly specified\nif (tool === 'auto') {\n  if (body.chart_type || body.chart_data || body.is_chart) {\n    tool = 'visualize_chart';\n  } else if (file_base64 || filename || body.file_path) {\n    tool = 'parse_document';\n  } else if (url && !query) {\n    tool = 'scrape';\n  } else if (body.full_research || body.research) {\n    tool = 'research';\n  } else {\n    tool = 'search';\n  }\n}\n\nreturn [{\n  json: {\n    tool: tool,\n    query: query,\n    url: url,\n    filename: filename,\n    file_base64: file_base64,\n    file_path: body.file_path || '',\n    file_type: body.file_type || '',\n    chart_type: chart_type,\n    chart_format: chart_format,\n    chart_payload: body.chart_payload || body.data || body,\n    language: body.language || 'id',\n    generate_pdf: body.generate_pdf !== false,\n    max_results: parseInt(body.max_results || 8),\n    request_id: `mcp_${Date.now()}`,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf09-agent",
+      "name": "MCP Intent Agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tool }}",
+                    "rightValue": "search",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Search"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tool }}",
+                    "rightValue": "scrape",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Scrape"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tool }}",
+                    "rightValue": "parse_document",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "ParseDoc"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tool }}",
+                    "rightValue": "research",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Research"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tool }}",
+                    "rightValue": "visualize_chart",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Chart"
+            }
+          ]
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "wf09-router",
+      "name": "MCP Tool Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://host.docker.internal:8001' }}/mcp/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"{{ $json.query }}\",\n  \"max_results\": {{ $json.max_results }},\n  \"language\": \"{{ $json.language }}\"\n}",
+        "options": {
+          "timeout": 30000,
+          "response": {"response": {"neverError": true}}
+        }
+      },
+      "id": "wf09-ddg-search",
+      "name": "DuckDuckGo Search Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://host.docker.internal:8001' }}/mcp/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.url }}\",\n  \"extract_tables\": true\n}",
+        "options": {
+          "timeout": 30000,
+          "response": {"response": {"neverError": true}}
+        }
+      },
+      "id": "wf09-firecrawl-scrape",
+      "name": "Web Scraper Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://host.docker.internal:8001' }}/mcp/parse-document",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filename\": \"{{ $json.filename || 'uploaded_doc.pdf' }}\",\n  \"file_base64\": \"{{ $json.file_base64 }}\",\n  \"file_path\": \"{{ $json.file_path }}\",\n  \"file_type\": \"{{ $json.file_type }}\"\n}",
+        "options": {
+          "timeout": 60000,
+          "response": {"response": {"neverError": true}}
+        }
+      },
+      "id": "wf09-doc-parser",
+      "name": "Document Parser Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 440]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://host.docker.internal:8001' }}/mcp/full-research",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"{{ $json.query }}\",\n  \"scrape_top_n\": 2,\n  \"language\": \"{{ $json.language }}\",\n  \"generate_pdf\": {{ $json.generate_pdf }}\n}",
+        "options": {
+          "timeout": 90000,
+          "response": {"response": {"neverError": true}}
+        }
+      },
+      "id": "wf09-full-research",
+      "name": "Full Research Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 580]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==========================================================================\n// CHART VISUALIZATION ENGINE (Plotly / Apache ECharts Standard)\n// ==========================================================================\nconst input = $input.first().json;\nconst chartType = (input.chart_type || 'soil_npk').toLowerCase();\nconst format = (input.chart_format || 'echarts').toLowerCase();\nconst payload = input.chart_payload || {};\n\nlet chartSpec = {};\n\nif (chartType.includes('soil') || chartType.includes('npk') || chartType.includes('radar')) {\n  const n = Number(payload.n || payload.nitrogen || 90);\n  const p = Number(payload.p || payload.phosphorus || 40);\n  const k = Number(payload.k || payload.potassium || 50);\n  const ph = Number(payload.ph || 6.5);\n  const moisture = Number(payload.moisture || 70);\n\n  if (format === 'plotly') {\n    chartSpec = {\n      format: 'plotly',\n      chart_type: 'radar',\n      data: [{\n        type: 'scatterpolar',\n        r: [n, p, k, ph * 10, moisture, n],\n        theta: ['Nitrogen', 'Fosfor', 'Kalium', 'pH x10', 'Kelembaban', 'Nitrogen'],\n        fill: 'toself',\n        line: { color: '#16a34a' }\n      }],\n      layout: { title: 'Profil Kesuburan Tanah (NPK)' }\n    };\n  } else {\n    chartSpec = {\n      format: 'echarts',\n      chart_type: 'radar',\n      option: {\n        title: { text: 'Profil Kesuburan Tanah (NPK)', left: 'center' },\n        tooltip: { trigger: 'item' },\n        radar: {\n          indicator: [\n            { name: `Nitrogen (${n})`, max: 140 },\n            { name: `Fosfor (${p})`, max: 80 },\n            { name: `Kalium (${k})`, max: 150 },\n            { name: `pH (${ph})`, max: 14 },\n            { name: `Kelembaban (${moisture}%)`, max: 100 }\n          ]\n        },\n        series: [{\n          type: 'radar',\n          data: [{ value: [n, p, k, ph, moisture], name: 'Status Aktual Lahan' }],\n          areaStyle: { color: 'rgba(22, 163, 74, 0.4)' },\n          lineStyle: { color: '#16a34a' }\n        }]\n      }\n    };\n  }\n} else {\n  chartSpec = {\n    format: format,\n    chart_type: chartType,\n    option: {\n      title: { text: 'AgriSensa Visualisasi', left: 'center' },\n      series: []\n    }\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    chart_type: chartType,\n    format: format,\n    spec: chartSpec\n  }\n}];"
+      },
+      "id": "wf09-chart-generator",
+      "name": "Chart Visualizer Node",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 720]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge and format output\nconst result = $input.first().json;\nconst agentInfo = $('MCP Intent Agent').item.json;\n\nreturn [{\n  json: {\n    success: result.success !== false,\n    tool_used: agentInfo.tool,\n    request_id: agentInfo.request_id,\n    output: result.data || result.spec || result,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf09-formatter",
+      "name": "Output Formatter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 440]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "WF-09-MCP-Tools"}
+            ]
+          }
+        }
+      },
+      "id": "wf09-respond",
+      "name": "Respond to Client",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 440]
+    }
+  ],
+  "connections": {
+    "MCP Webhook Node": {
+      "main": [
+        [{"node": "MCP Intent Agent", "type": "main", "index": 0}]
+      ]
+    },
+    "MCP Intent Agent": {
+      "main": [
+        [{"node": "MCP Tool Router", "type": "main", "index": 0}]
+      ]
+    },
+    "MCP Tool Router": {
+      "main": [
+        [{"node": "DuckDuckGo Search Node", "type": "main", "index": 0}],
+        [{"node": "Web Scraper Node", "type": "main", "index": 0}],
+        [{"node": "Document Parser Node", "type": "main", "index": 0}],
+        [{"node": "Full Research Node", "type": "main", "index": 0}],
+        [{"node": "Chart Visualizer Node", "type": "main", "index": 0}]
+      ]
+    },
+    "DuckDuckGo Search Node": {
+      "main": [
+        [{"node": "Output Formatter", "type": "main", "index": 0}]
+      ]
+    },
+    "Web Scraper Node": {
+      "main": [
+        [{"node": "Output Formatter", "type": "main", "index": 0}]
+      ]
+    },
+    "Document Parser Node": {
+      "main": [
+        [{"node": "Output Formatter", "type": "main", "index": 0}]
+      ]
+    },
+    "Full Research Node": {
+      "main": [
+        [{"node": "Output Formatter", "type": "main", "index": 0}]
+      ]
+    },
+    "Chart Visualizer Node": {
+      "main": [
+        [{"node": "Output Formatter", "type": "main", "index": 0}]
+      ]
+    },
+    "Output Formatter": {
+      "main": [
+        [{"node": "Respond to Client", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": [
+    "agrisensa",
+    "mcp",
+    "visualization",
+    "echarts",
+    "plotly",
+    "duckduckgo",
+    "document-parser"
+  ],
+  "meta": {
+    "description": "WF-09: AgriSensa MCP Tools Orchestrator - Chart Visualizer (Plotly/ECharts), DuckDuckGo Search, Web Scraping, Document Parser (PDF/DOCX/XLSX), and Deep Research"
+  }
+}

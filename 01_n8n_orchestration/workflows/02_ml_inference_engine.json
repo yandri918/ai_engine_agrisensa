@@ -1,0 +1,263 @@
+{
+  "name": "WF-02: ML Inference Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/ml",
+        "responseMode": "responseNode",
+        "options": {"allowedOrigins": "*"}
+      },
+      "id": "wf02-webhook",
+      "name": "⚙️ ML Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate ML inference request\nconst body = $input.first().json.body || $input.first().json;\n\nconst validTasks = [\n  'recommend_crop', 'predict_yield', 'predict_yield_advanced',\n  'generate_yield_plan', 'calculate_fertilizer', 'predict_success',\n  'analyze_npk'\n];\n\nconst task = body.task;\nif (!task || !validTasks.includes(task)) {\n  throw new Error(`Task '${task}' tidak valid. Valid: ${validTasks.join(', ')}`);\n}\n\n// Schema validation per task\nconst schemas = {\n  recommend_crop: ['n_value', 'p_value', 'k_value', 'temperature', 'humidity', 'ph', 'rainfall'],\n  predict_yield: ['nitrogen', 'phosphorus', 'potassium', 'temperature', 'rainfall', 'ph'],\n  predict_yield_advanced: ['nitrogen', 'phosphorus', 'potassium', 'temperature', 'rainfall', 'ph'],\n  generate_yield_plan: ['commodity', 'target_yield'],\n  calculate_fertilizer: ['nutrient_needed', 'nutrient_amount_kg', 'fertilizer_type'],\n  predict_success: ['nitrogen', 'phosphorus', 'potassium', 'temperature', 'rainfall', 'ph'],\n  analyze_npk: ['n_value', 'p_value', 'k_value']\n};\n\nconst required = schemas[task] || [];\nconst missing = required.filter(f => body[f] === undefined || body[f] === null);\nif (missing.length > 0) {\n  throw new Error(`Field wajib tidak ada untuk task '${task}': ${missing.join(', ')}`);\n}\n\nreturn [{\n  json: {\n    task: task,\n    payload: body,\n    request_id: `ml_${Date.now()}_${Math.random().toString(36).substr(2,6)}`,\n    start_time: Date.now()\n  }\n}];"
+      },
+      "id": "wf02-validator",
+      "name": "✅ Schema Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.task }}", "rightValue": "recommend_crop", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Crop Recommend"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.task }}", "rightValue": "predict_yield", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Yield Predict"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.task }}", "rightValue": "predict_yield_advanced", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Yield XAI"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.task }}", "rightValue": "generate_yield_plan", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Yield Plan"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.task }}", "rightValue": "calculate_fertilizer", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Fertilizer Calc"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.task }}", "rightValue": "predict_success", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "Success Predict"
+            },
+            {
+              "conditions": {"conditions": [{"leftValue": "={{ $json.task }}", "rightValue": "analyze_npk", "operator": {"type": "string", "operation": "equals"}}]},
+              "renameOutput": true, "outputKey": "NPK Analysis"
+            }
+          ]
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "wf02-task-switch",
+      "name": "🔀 Task Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://localhost:8000' }}/api/ml/recommend-crop",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json.payload) }}",
+        "options": {"timeout": 15000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf02-crop-recommend",
+      "name": "🌾 Crop Recommendation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://localhost:8000' }}/api/ml/predict-yield",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json.payload) }}",
+        "options": {"timeout": 15000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf02-yield-predict",
+      "name": "📊 Yield Prediction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 230]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://localhost:8000' }}/api/ml/predict-yield-advanced",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json.payload) }}",
+        "options": {"timeout": 20000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf02-yield-xai",
+      "name": "🔍 Yield XAI (SHAP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://localhost:8000' }}/api/ml/generate-yield-plan",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({commodity: $json.payload.commodity, target_yield: $json.payload.target_yield}) }}",
+        "options": {"timeout": 20000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf02-yield-plan",
+      "name": "📋 Yield Plan Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 490]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://localhost:8000' }}/api/ml/calculate-fertilizer-bags",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({nutrient_needed: $json.payload.nutrient_needed, nutrient_amount_kg: $json.payload.nutrient_amount_kg, fertilizer_type: $json.payload.fertilizer_type}) }}",
+        "options": {"timeout": 10000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf02-fertilizer",
+      "name": "🧮 Fertilizer Calculator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 620]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://localhost:8000' }}/api/ml/predict-success",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json.payload) }}",
+        "options": {"timeout": 15000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf02-success",
+      "name": "✨ Success Predictor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 750]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://localhost:8000' }}/api/analysis/npk",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({n_value: $json.payload.n_value, p_value: $json.payload.p_value, k_value: $json.payload.k_value}) }}",
+        "options": {"timeout": 10000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf02-npk",
+      "name": "🧪 NPK Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 880]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enrich ML response with metadata and save to audit log\nconst result = $input.first().json;\nconst validatorData = $('✅ Schema Validator').item.json;\nconst endTime = Date.now();\nconst processingTime = endTime - validatorData.start_time;\n\nreturn [{\n  json: {\n    success: result.success !== false,\n    task: validatorData.task,\n    request_id: validatorData.request_id,\n    result: result,\n    processing_time_ms: processingTime,\n    metadata: {\n      engine: 'agrisensa-ml-v2',\n      workflow: 'WF-02',\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "wf02-enricher",
+      "name": "📦 Result Enricher",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1150, 490]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO ml_predictions_log (workflow_execution_id, task_type, input_data, output_data, processing_time_ms, status, created_at)\nVALUES (\n  '{{ $json.request_id }}',\n  '{{ $json.task }}',\n  '{{ JSON.stringify($('✅ Schema Validator').item.json.payload).replace(/'/g, \"''\") }}',\n  '{{ JSON.stringify($json.result).replace(/'/g, \"''\") }}',\n  {{ $json.processing_time_ms }},\n  '{{ $json.success ? \"success\" : \"error\" }}',\n  NOW()\n);",
+        "additionalFields": {}
+      },
+      "id": "wf02-audit-log",
+      "name": "📝 Audit Log (PG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1380, 490],
+      "credentials": {"postgres": {"id": "agrisensa-postgres", "name": "AgriSensa PostgreSQL"}},
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.success ? 200 : 422 }}",
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "WF-02-ML-Inference"},
+              {"name": "X-Request-ID", "value": "={{ $('✅ Schema Validator').item.json.request_id }}"},
+              {"name": "X-Processing-Time-Ms", "value": "={{ $json.processing_time_ms }}"}
+            ]
+          }
+        }
+      },
+      "id": "wf02-respond",
+      "name": "📤 Respond to Client",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1600, 490]
+    }
+  ],
+  "connections": {
+    "⚙️ ML Webhook": {"main": [[{"node": "✅ Schema Validator", "type": "main", "index": 0}]]},
+    "✅ Schema Validator": {"main": [[{"node": "🔀 Task Router", "type": "main", "index": 0}]]},
+    "🔀 Task Router": {
+      "main": [
+        [{"node": "🌾 Crop Recommendation", "type": "main", "index": 0}],
+        [{"node": "📊 Yield Prediction", "type": "main", "index": 0}],
+        [{"node": "🔍 Yield XAI (SHAP)", "type": "main", "index": 0}],
+        [{"node": "📋 Yield Plan Generator", "type": "main", "index": 0}],
+        [{"node": "🧮 Fertilizer Calculator", "type": "main", "index": 0}],
+        [{"node": "✨ Success Predictor", "type": "main", "index": 0}],
+        [{"node": "🧪 NPK Analyzer", "type": "main", "index": 0}]
+      ]
+    },
+    "🌾 Crop Recommendation": {"main": [[{"node": "📦 Result Enricher", "type": "main", "index": 0}]]},
+    "📊 Yield Prediction": {"main": [[{"node": "📦 Result Enricher", "type": "main", "index": 0}]]},
+    "🔍 Yield XAI (SHAP)": {"main": [[{"node": "📦 Result Enricher", "type": "main", "index": 0}]]},
+    "📋 Yield Plan Generator": {"main": [[{"node": "📦 Result Enricher", "type": "main", "index": 0}]]},
+    "🧮 Fertilizer Calculator": {"main": [[{"node": "📦 Result Enricher", "type": "main", "index": 0}]]},
+    "✨ Success Predictor": {"main": [[{"node": "📦 Result Enricher", "type": "main", "index": 0}]]},
+    "🧪 NPK Analyzer": {"main": [[{"node": "📦 Result Enricher", "type": "main", "index": 0}]]},
+    "📦 Result Enricher": {"main": [[{"node": "📝 Audit Log (PG)", "type": "main", "index": 0}]]},
+    "📝 Audit Log (PG)": {"main": [[{"node": "📤 Respond to Client", "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "tags": ["agrisensa", "ml", "inference", "prediction"],
+  "meta": {"description": "ML Inference Engine - routes 7 different ML tasks to AgriSensa FastAPI with full audit logging"}
+}

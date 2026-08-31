@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriSensa - Portfolio Project | Yandri918</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Minimized CSS for file size */
+        :root {
+            --primary: #10b981;
+            --dark: #0f172a;
+            --gray-50: #f8fafc;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background: var(--gray-50);
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--gray-700);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .hero {
+            padding: 8rem 2rem 4rem;
+            background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #34d399, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+        }
+
+        .section-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            transition: all 0.3s;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="nav-container"><a href="#" class="logo">🌾 AgriSensa</a></div>
+    </nav>
+
+    <section class="hero">
+        <h1>🌾 AgriSensa</h1>
+        <p style="font-size: 1.5rem; margin-bottom: 2rem;">Platform Pertanian Cerdas Berbasis AI</p>
+        <p style="max-width: 800px; margin: 0 auto 2rem;">Platform komprehensif dengan 25+ modul AI untuk memberdayakan
+            petani Indonesia</p>
+        <a href="https://huggingface.co/spaces/yandri918/agrisensa-api" class="btn btn-primary" target="_blank">🚀 Live
+            Demo</a>
+    </section>
+
+    <div class="container">
+        <section class="section">
+            <h2 class="section-title">Project Overview</h2>
+            <div class="grid grid-4">
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 800; color: var(--primary);">25+</div>
+                    <div>Modul AI</div>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 800; color: var(--primary);">7</div>
+                    <div>ML Models</div>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 800; color: var(--primary);">20+</div>
+                    <div>Komoditas</div>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 800; color: var(--primary);">99.5%</div>
+                    <div>Uptime</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Key Features</h2>
+            <div class="grid grid-3">
+                <div class="card">
+                    <div style="font-size: 3rem;">🤖</div>
+                    <h3>AgriBot AI</h3>
+                    <p>Chatbot cerdas berbasis Google Gemini AI</p>
+                </div>
+                <div class="card">
+                    <div style="font-size: 3rem;">🌾</div>
+                    <h3>Crop Recommendation</h3>
+                    <p>Analisis 7 parameter untuk rekomendasi optimal</p>
+                </div>
+                <div class="card">
+                    <div style="font-size: 3rem;">🔬</div>
+                    <h3>Disease Detection</h3>
+                    <p>Computer Vision dengan Roboflow</p>
+                </div>
+                <div class="card">
+                    <div style="font-size: 3rem;">📊</div>
+                    <h3>Market Intelligence</h3>
+                    <p>Prediksi harga dengan ML</p>
+                </div>
+                <div class="card">
+                    <div style="font-size: 3rem;">🧮</div>
+                    <h3>Fertilizer Calculator</h3>
+                    <p>Perhitungan pupuk presisi</p>
+                </div>
+                <div class="card">
+                    <div style="font-size: 3rem;">📚</div>
+                    <h3>Knowledge Base</h3>
+                    <p>Database lengkap SOP budidaya</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Technology Stack</h2>
+            <div class="grid grid-3">
+                <div class="card">
+                    <h3 style="color: var(--primary);">Backend</h3>
+                    <ul style="list-style: none;">
+                        <li>✓ Python 3.12</li>
+                        <li>✓ Flask 3.0</li>
+                        <li>✓ SQLAlchemy</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--primary);">Machine Learning</h3>
+                    <ul style="list-style: none;">
+                        <li>✓ scikit-learn</li>
+                        <li>✓ TensorFlow</li>
+                        <li>✓ SHAP (XAI)</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 style="color: var(--primary);">AI Services</h3>
+                    <ul style="list-style: none;">
+                        <li>✓ Google Gemini</li>
+                        <li>✓ Roboflow CV</li>
+                        <li>✓ Custom Models</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <h2 style="font-family: 'Poppins', sans-serif; margin-bottom: 1rem;">Get In Touch</h2>
+        <div style="display: flex; justify-content: center; gap: 2rem; margin: 2rem 0;">
+            <a href="https://github.com/yandri918" style="color: white; text-decoration: none;" target="_blank">📂
+                GitHub</a>
+            <a href="https://linkedin.com/in/yandri918" style="color: white; text-decoration: none;" target="_blank">💼
+                LinkedIn</a>
+        </div>
+        <p>&copy; 2025 Yandri918. Built with ❤️ for Indonesian Farmers</p>
+    </footer>
+</body>
+
+</html>

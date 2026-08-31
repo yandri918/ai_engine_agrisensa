@@ -1,0 +1,156 @@
+{
+  "name": "WF-05: Weather & Climate Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/weather",
+        "responseMode": "responseNode",
+        "options": {"allowedOrigins": "*"}
+      },
+      "id": "wf05-webhook",
+      "name": "🌦️ Weather Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse and validate location input\nconst body = $input.first().json.body || $input.first().json;\n\nconst latitude = parseFloat(body.latitude || body.lat);\nconst longitude = parseFloat(body.longitude || body.lon || body.lng);\nconst locationName = body.location_name || body.city || `${latitude},${longitude}`;\nconst commodity = body.commodity || null;\nconst forecastDays = parseInt(body.forecast_days || 7);\n\nif (isNaN(latitude) || isNaN(longitude)) {\n  throw new Error('Latitude dan longitude wajib disertakan dan harus berupa angka');\n}\n\n// Validate Indonesian bounds approximately\nif (latitude < -11 || latitude > 6 || longitude < 95 || longitude > 141) {\n  throw new Error('Koordinat di luar wilayah Indonesia');\n}\n\nreturn [{\n  json: {\n    latitude: latitude,\n    longitude: longitude,\n    location_name: locationName,\n    commodity: commodity,\n    forecast_days: Math.min(forecastDays, 16),\n    request_id: `wx_${Date.now()}`,\n    start_time: Date.now()\n  }\n}];"
+      },
+      "id": "wf05-validator",
+      "name": "✅ Location Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.openweathermap.org/data/2.5/forecast?lat={{ $json.latitude }}&lon={{ $json.longitude }}&appid={{ $env.OPENWEATHER_API_KEY }}&units=metric&cnt=40&lang=id",
+        "options": {"timeout": 10000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf05-openweather",
+      "name": "🌤️ OpenWeatherMap API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 250]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR,RH2M,WS10M&community=AG&longitude={{ $('✅ Location Validator').item.json.longitude }}&latitude={{ $('✅ Location Validator').item.json.latitude }}&start={{ new Date(Date.now() - 30*86400000).toISOString().slice(0,10).replace(/-/g,'') }}&end={{ new Date().toISOString().slice(0,10).replace(/-/g,'') }}&format=JSON",
+        "options": {"timeout": 30000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf05-nasa-power",
+      "name": "🛰️ NASA POWER Climate API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 560]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByIndex",
+        "options": {}
+      },
+      "id": "wf05-merge",
+      "name": "🔗 Merge Climate Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse combined weather + climate data\nconst items = $input.all();\nconst validatorData = $('✅ Location Validator').item.json;\n\nlet weatherData = {};\nlet climateData = {};\n\nfor (const item of items) {\n  if (item.json.list) {\n    // OpenWeatherMap forecast\n    const forecasts = item.json.list || [];\n    const daily = {};\n    for (const f of forecasts) {\n      const day = new Date(f.dt * 1000).toISOString().split('T')[0];\n      if (!daily[day]) {\n        daily[day] = {\n          date: day,\n          temp_min: f.main.temp_min,\n          temp_max: f.main.temp_max,\n          temp_avg: f.main.temp,\n          humidity: f.main.humidity,\n          rainfall_mm: (f.rain?.['3h'] || 0) * 8, // 3h to 24h estimate\n          weather_desc: f.weather[0]?.description || '',\n          weather_icon: f.weather[0]?.icon || '',\n          wind_speed_ms: f.wind?.speed || 0\n        };\n      }\n    }\n    weatherData = {\n      city: item.json.city?.name || validatorData.location_name,\n      country: item.json.city?.country || 'ID',\n      daily_forecast: Object.values(daily).slice(0, validatorData.forecast_days)\n    };\n  } else if (item.json.properties) {\n    // NASA POWER format\n    const params = item.json.properties.parameter || {};\n    const t2m = params.T2M || {};\n    const prec = params.PRECTOTCORR || {};\n    const rh2m = params.RH2M || {};\n    \n    const dates = Object.keys(t2m);\n    const avgTemp = dates.reduce((s, d) => s + (t2m[d] || 0), 0) / dates.length;\n    const totalRainfall = dates.reduce((s, d) => s + (prec[d] || 0), 0);\n    const avgHumidity = dates.reduce((s, d) => s + (rh2m[d] || 0), 0) / dates.length;\n    \n    climateData = {\n      period_days: dates.length,\n      avg_temperature_c: Math.round(avgTemp * 10) / 10,\n      total_rainfall_mm: Math.round(totalRainfall * 10) / 10,\n      avg_humidity_pct: Math.round(avgHumidity * 10) / 10,\n      source: 'NASA POWER'\n    };\n  }\n}\n\n// Planting calendar generation based on climate\nfunction getPlantingCalendar(climate, commodity) {\n  const month = new Date().getMonth() + 1;\n  const isWetSeason = climate.total_rainfall_mm > 100; // simplified\n  \n  const recommendations = [];\n  \n  if (isWetSeason) {\n    recommendations.push({ crop: 'Padi', suitability: 'Sangat Baik', reason: 'Musim hujan ideal untuk padi' });\n    recommendations.push({ crop: 'Jagung', suitability: 'Baik', reason: 'Cukup air untuk pertumbuhan' });\n    recommendations.push({ crop: 'Cabai', suitability: 'Cukup', reason: 'Perlu drainase baik' });\n  } else {\n    recommendations.push({ crop: 'Singkong', suitability: 'Sangat Baik', reason: 'Toleran kekeringan' });\n    recommendations.push({ crop: 'Jagung', suitability: 'Cukup', reason: 'Butuh irigasi tambahan' });\n    recommendations.push({ crop: 'Kacang Tanah', suitability: 'Baik', reason: 'Cocok musim kemarau' });\n  }\n  \n  return {\n    current_season: isWetSeason ? 'Musim Hujan' : 'Musim Kemarau',\n    month: month,\n    planting_recommendations: recommendations,\n    next_review_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]\n  };\n}\n\nconst plantingCalendar = getPlantingCalendar(climateData, validatorData.commodity);\n\nreturn [{\n  json: {\n    location: {\n      name: validatorData.location_name,\n      latitude: validatorData.latitude,\n      longitude: validatorData.longitude\n    },\n    weather_forecast: weatherData,\n    climate_summary: climateData,\n    planting_calendar: plantingCalendar,\n    request_id: validatorData.request_id,\n    processing_time_ms: Date.now() - validatorData.start_time\n  }\n}];"
+      },
+      "id": "wf05-parser",
+      "name": "🗂️ Parse Climate Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Anda adalah konsultan pertanian AgriSensa. Berikan rekomendasi pertanian berbasis kondisi cuaca dan iklim berikut untuk lokasi {{ $json.location.name }}, Indonesia.\\n\\nRingkasan Iklim 30 Hari Terakhir:\\n- Suhu rata-rata: {{ $json.climate_summary.avg_temperature_c }}°C\\n- Total curah hujan: {{ $json.climate_summary.total_rainfall_mm }} mm\\n- Kelembaban rata-rata: {{ $json.climate_summary.avg_humidity_pct }}%\\n\\nPrakiraan Cuaca 7 Hari ke Depan:\\n{{ JSON.stringify($json.weather_forecast.daily_forecast?.slice(0,3), null, 2) }}\\n\\nKalender Tanam Saat Ini: {{ $json.planting_calendar.current_season }}\\n\\nBerikan rekomendasi dalam Bahasa Indonesia yang praktis untuk petani:\\n1. Kondisi cuaca saat ini dan dampaknya\\n2. Tanaman yang paling cocok ditanam sekarang\\n3. Peringatan cuaca khusus jika ada\\n4. Tips irigasi dan pengelolaan air\\n\"\n    }]\n  }],\n  \"generationConfig\": {\"temperature\": 0.4, \"maxOutputTokens\": 800}\n}",
+        "options": {"timeout": 30000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf05-gemini",
+      "name": "🧠 Gemini Agro Advisor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build final weather + farming recommendation response\nconst weatherData = $('🗂️ Parse Climate Data').item.json;\nconst geminiResponse = $input.first().json;\n\nconst aiRecommendation = geminiResponse?.candidates?.[0]?.content?.parts?.[0]?.text\n  || 'Rekomendasi AI tidak tersedia saat ini.';\n\nreturn [{\n  json: {\n    success: true,\n    ...weatherData,\n    ai_farming_recommendation: aiRecommendation,\n    metadata: {\n      engine: 'agrisensa-weather-v2',\n      data_sources: ['OpenWeatherMap', 'NASA POWER', 'Gemini AI'],\n      workflow: 'WF-05',\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "wf05-final-builder",
+      "name": "📋 Final Report Builder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO weather_data_cache (latitude, longitude, location_name, weather_data, climate_data, planting_calendar, forecast_date, expires_at)\nVALUES (\n  {{ $json.location.latitude }},\n  {{ $json.location.longitude }},\n  '{{ $json.location.name.replace(/'/g, \"''\") }}',\n  '{{ JSON.stringify($json.weather_forecast).replace(/'/g, \"''\") }}',\n  '{{ JSON.stringify($json.climate_summary).replace(/'/g, \"''\") }}',\n  '{{ JSON.stringify($json.planting_calendar).replace(/'/g, \"''\") }}',\n  CURRENT_DATE,\n  NOW() + INTERVAL '3 hours'\n)\nON CONFLICT DO NOTHING;",
+        "additionalFields": {}
+      },
+      "id": "wf05-cache-save",
+      "name": "💾 Cache Weather (PG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1760, 400],
+      "credentials": {"postgres": {"id": "agrisensa-postgres", "name": "AgriSensa PostgreSQL"}},
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "WF-05-Weather-Climate"},
+              {"name": "Cache-Control", "value": "max-age=10800"}
+            ]
+          }
+        }
+      },
+      "id": "wf05-respond",
+      "name": "📤 Respond to Client",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1980, 400]
+    }
+  ],
+  "connections": {
+    "🌦️ Weather Webhook": {"main": [[{"node": "✅ Location Validator", "type": "main", "index": 0}]]},
+    "✅ Location Validator": {
+      "main": [[
+        {"node": "🌤️ OpenWeatherMap API", "type": "main", "index": 0},
+        {"node": "🛰️ NASA POWER Climate API", "type": "main", "index": 0}
+      ]]
+    },
+    "🌤️ OpenWeatherMap API": {"main": [[{"node": "🔗 Merge Climate Data", "type": "main", "index": 0}]]},
+    "🛰️ NASA POWER Climate API": {"main": [[{"node": "🔗 Merge Climate Data", "type": "main", "index": 1}]]},
+    "🔗 Merge Climate Data": {"main": [[{"node": "🗂️ Parse Climate Data", "type": "main", "index": 0}]]},
+    "🗂️ Parse Climate Data": {"main": [[{"node": "🧠 Gemini Agro Advisor", "type": "main", "index": 0}]]},
+    "🧠 Gemini Agro Advisor": {"main": [[{"node": "📋 Final Report Builder", "type": "main", "index": 0}]]},
+    "📋 Final Report Builder": {"main": [[{"node": "💾 Cache Weather (PG)", "type": "main", "index": 0}]]},
+    "💾 Cache Weather (PG)": {"main": [[{"node": "📤 Respond to Client", "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "tags": ["agrisensa", "weather", "climate", "planting-calendar"],
+  "meta": {"description": "Weather & Climate Engine - parallel OpenWeatherMap + NASA POWER with Gemini farming recommendations"}
+}

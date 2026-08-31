@@ -1,0 +1,17 @@
+base:
+  random_state: 42
+
+data:
+  raw_path: "data/raw/yield.csv"
+  processed_dir: "data/processed"
+  test_size: 0.2
+
+train:
+  estimator: "RandomForestRegressor"
+  n_estimators: 50
+  max_depth: 10
+  model_dir: "models"
+  model_path: "models/yield_model.pkl"
+
+evaluate:
+  metrics_path: "evaluation.json"

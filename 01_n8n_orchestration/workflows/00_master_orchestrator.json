@@ -1,0 +1,270 @@
+{
+  "name": "WF-00: AgriSensa Master Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/gateway",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-master",
+      "name": "🌾 AgriSensa Gateway",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// AgriSensa Master Orchestrator — Intent Router\n// Routes incoming requests to appropriate sub-workflows\n// ============================================================\n\nconst body = $input.first().json.body || $input.first().json;\nconst headers = $input.first().json.headers || {};\n\n// Extract key fields\nconst intent = body.intent || body.task || null;\nconst query = body.query || body.message || '';\nconst hasFile = body.has_file || headers['content-type']?.includes('multipart') || body.file_base64 || false;\n\n// Auto-detect intent from query if not explicitly provided\nfunction detectIntent(text) {\n  const t = text.toLowerCase();\n  if (body.tool || body.url || body.file_base64 || t.includes('scrape') || t.includes('cari web') || t.includes('search')) {\n    return 'mcp_tools';\n  }\n  if (t.includes('monte') || t.includes('rab') || t.includes('bep') || t.includes('carbon') || t.includes('karbon') || t.includes('co2') || t.includes('forecast')) {\n    return 'advanced_engine';\n  }\n  if (hasFile || t.includes('gambar') || t.includes('foto') || t.includes('penyakit') || t.includes('daun')) {\n    return 'computer_vision';\n  }\n  if (t.includes('harga') || t.includes('pasar') || t.includes('komoditas') || t.includes('market')) {\n    return 'market_intelligence';\n  }\n  if (t.includes('cuaca') || t.includes('iklim') || t.includes('kalender tanam') || t.includes('lokasi')) {\n    return 'weather_climate';\n  }\n  if (\n    (t.includes('rekomendasi') && (t.includes('tanaman') || t.includes('pupuk'))) ||\n    t.includes('prediksi') || t.includes('npk') || t.includes('hasil panen') ||\n    t.includes('ton/ha') || t.includes('keberhasilan')\n  ) {\n    return 'ml_inference';\n  }\n  // Default: chat / RAG\n  return 'rag_chat';\n}\n\nconst resolvedIntent = intent || detectIntent(query);\n\n// Map to sub-workflow webhook paths\nconst routeMap = {\n  'rag_chat': '/webhook/agrisensa/chat',\n  'ml_inference': '/webhook/agrisensa/ml',\n  'computer_vision': '/webhook/agrisensa/vision',\n  'market_intelligence': '/webhook/agrisensa/market',\n  'weather_climate': '/webhook/agrisensa/weather',\n  'advanced_engine': '/webhook/agrisensa/advanced',\n  'mcp_tools': '/webhook/agrisensa/mcp',\n  'mlops_monitor': '/webhook/agrisensa/mlops',\n  'notification': '/webhook/agrisensa/notify'\n};\n\nreturn [{\n  json: {\n    ...body,\n    _intent: resolvedIntent,\n    _route: routeMap[resolvedIntent] || routeMap['rag_chat'],\n    _timestamp: new Date().toISOString(),\n    _request_id: Math.random().toString(36).substr(2, 9)\n  }\n}];"
+      },
+      "id": "intent-router",
+      "name": "🔀 Intent Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {"caseSensitive": false},
+                "conditions": [{"leftValue": "={{ $json._intent }}", "rightValue": "rag_chat", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "RAG Chat"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": false},
+                "conditions": [{"leftValue": "={{ $json._intent }}", "rightValue": "ml_inference", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "ML Inference"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": false},
+                "conditions": [{"leftValue": "={{ $json._intent }}", "rightValue": "computer_vision", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "Computer Vision"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": false},
+                "conditions": [{"leftValue": "={{ $json._intent }}", "rightValue": "market_intelligence", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "Market Intelligence"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": false},
+                "conditions": [{"leftValue": "={{ $json._intent }}", "rightValue": "weather_climate", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "Weather Climate"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": false},
+                "conditions": [{"leftValue": "={{ $json._intent }}", "rightValue": "advanced_engine", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "Advanced Engine"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": false},
+                "conditions": [{"leftValue": "={{ $json._intent }}", "rightValue": "mcp_tools", "operator": {"type": "string", "operation": "equals"}}]
+              },
+              "renameOutput": true,
+              "outputKey": "MCP Tools"
+            }
+          ]
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "workflow-switch",
+      "name": "⚡ Workflow Dispatcher",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST_URL || 'http://localhost:5678' }}/webhook/agrisensa/chat",
+        "sendBody": true,
+        "bodyParameters": {"parameters": [{"name": "={{ Object.keys($json) }}", "value": "={{ $json }}"}]},
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "call-rag-chat",
+      "name": "📨 Call RAG Chat WF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST_URL || 'http://localhost:5678' }}/webhook/agrisensa/ml",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "call-ml-inference",
+      "name": "🤖 Call ML Inference WF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST_URL || 'http://localhost:5678' }}/webhook/agrisensa/vision",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "call-cv",
+      "name": "📸 Call CV Engine WF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST_URL || 'http://localhost:5678' }}/webhook/agrisensa/market",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "call-market",
+      "name": "💰 Call Market Intel WF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 550]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST_URL || 'http://localhost:5678' }}/webhook/agrisensa/weather",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "call-weather",
+      "name": "🌦️ Call Weather WF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 700]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST_URL || 'http://localhost:5678' }}/webhook/agrisensa/advanced",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "call-advanced",
+      "name": "🚀 Call Advanced AI WF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 850]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST_URL || 'http://localhost:5678' }}/webhook/agrisensa/mcp",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "call-mcp",
+      "name": "🌐 Call MCP Tools WF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 1000]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "n8n-orchestrator"},
+              {"name": "X-Request-ID", "value": "={{ $('🔀 Intent Router').item.json._request_id }}"}
+            ]
+          }
+        }
+      },
+      "id": "respond-webhook",
+      "name": "✅ Respond to Client",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rate limiter & API key validator\nconst body = $input.first().json;\nconst apiKey = body.api_key || $input.first().json.headers?.['x-api-key'];\n\n// Simple validation (extend with Redis rate limiting as needed)\nconst requiredFields = {\n  rag_chat: ['query'],\n  ml_inference: ['task'],\n  computer_vision: ['image_base64'],\n  market_intelligence: ['commodity'],\n  weather_climate: ['latitude', 'longitude']\n};\n\nreturn $input.all();"
+      },
+      "id": "request-validator",
+      "name": "🔐 Request Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 300]
+    }
+  ],
+  "connections": {
+    "🌾 AgriSensa Gateway": {"main": [[{"node": "🔐 Request Validator", "type": "main", "index": 0}]]},
+    "🔐 Request Validator": {"main": [[{"node": "🔀 Intent Router", "type": "main", "index": 0}]]},
+    "🔀 Intent Router": {"main": [[{"node": "⚡ Workflow Dispatcher", "type": "main", "index": 0}]]},
+    "⚡ Workflow Dispatcher": {
+      "main": [
+        [{"node": "📨 Call RAG Chat WF", "type": "main", "index": 0}],
+        [{"node": "🤖 Call ML Inference WF", "type": "main", "index": 0}],
+        [{"node": "📸 Call CV Engine WF", "type": "main", "index": 0}],
+        [{"node": "💰 Call Market Intel WF", "type": "main", "index": 0}],
+        [{"node": "🌦️ Call Weather WF", "type": "main", "index": 0}],
+        [{"node": "🚀 Call Advanced AI WF", "type": "main", "index": 0}],
+        [{"node": "🌐 Call MCP Tools WF", "type": "main", "index": 0}]
+      ]
+    },
+    "📨 Call RAG Chat WF": {"main": [[{"node": "✅ Respond to Client", "type": "main", "index": 0}]]},
+    "🤖 Call ML Inference WF": {"main": [[{"node": "✅ Respond to Client", "type": "main", "index": 0}]]},
+    "📸 Call CV Engine WF": {"main": [[{"node": "✅ Respond to Client", "type": "main", "index": 0}]]},
+    "💰 Call Market Intel WF": {"main": [[{"node": "✅ Respond to Client", "type": "main", "index": 0}]]},
+    "🌦️ Call Weather WF": {"main": [[{"node": "✅ Respond to Client", "type": "main", "index": 0}]]},
+    "🚀 Call Advanced AI WF": {"main": [[{"node": "✅ Respond to Client", "type": "main", "index": 0}]]},
+    "🌐 Call MCP Tools WF": {"main": [[{"node": "✅ Respond to Client", "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "tags": ["agrisensa", "orchestrator", "gateway"],
+  "meta": {
+    "description": "AgriSensa Master AI Engine Gateway - Routes requests to specialized sub-workflows",
+    "templateId": "agrisensa-master-v1"
+  }
+}

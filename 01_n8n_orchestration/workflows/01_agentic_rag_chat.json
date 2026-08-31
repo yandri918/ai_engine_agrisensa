@@ -1,0 +1,170 @@
+{
+  "name": "WF-01: Agentic RAG Chat Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/chat",
+        "responseMode": "responseNode",
+        "options": {"allowedOrigins": "*"}
+      },
+      "id": "wf01-webhook",
+      "name": "🗣️ Chat Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and normalize chat input\nconst body = $input.first().json.body || $input.first().json;\n\nconst query = body.query || body.message || body.question || '';\nif (!query || query.trim() === '') {\n  throw new Error('Query tidak boleh kosong');\n}\n\nconst sessionId = body.session_id || body.sessionId || `sess_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;\nconst chatHistory = body.chat_history || body.history || [];\nconst userId = body.user_id || 'anonymous';\n\nreturn [{\n  json: {\n    query: query.trim(),\n    session_id: sessionId,\n    chat_history: chatHistory.slice(-10), // Keep last 10 messages\n    user_id: userId,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf01-validator",
+      "name": "✅ Input Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://{{ $env.REDIS_HOST || 'localhost' }}:{{ $env.REDIS_PORT || '6380' }}/get/chat:{{ $json.session_id }}",
+        "options": {}
+      },
+      "id": "wf01-session-load",
+      "name": "📂 Load Session (Redis)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGRISENSA_API_URL || 'http://localhost:8000' }}/api/chat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Accept", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"query\": \"{{ $('✅ Input Validator').item.json.query }}\",\n  \"chat_history\": {{ JSON.stringify($('✅ Input Validator').item.json.chat_history) }}\n}",
+        "options": {
+          "timeout": 30000,
+          "response": {"response": {"neverError": true}}
+        }
+      },
+      "id": "wf01-agrisensa-api",
+      "name": "🤖 AgriSensa AI Core API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": false},
+          "conditions": [
+            {
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {"type": "number", "operation": "equals"}
+            }
+          ]
+        }
+      },
+      "id": "wf01-if-success",
+      "name": "❓ API Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build enriched response from AgriSensa API\nconst apiResponse = $input.first().json;\nconst inputData = $('✅ Input Validator').item.json;\n\nconst answer = apiResponse.answer || apiResponse.response || 'Maaf, tidak dapat memproses permintaan Anda saat ini.';\nconst route = apiResponse.route || 'knowledge';\nconst sources = apiResponse.sources || [];\nconst toolUsed = apiResponse.tool_used || null;\nconst toolResult = apiResponse.tool_result || null;\n\nreturn [{\n  json: {\n    success: true,\n    session_id: inputData.session_id,\n    query: inputData.query,\n    answer: answer,\n    route: route,\n    sources: sources,\n    tool_used: toolUsed,\n    tool_result: toolResult,\n    metadata: {\n      engine: 'agrisensa-rag-v2',\n      timestamp: new Date().toISOString(),\n      workflow: 'WF-01'\n    }\n  }\n}];"
+      },
+      "id": "wf01-response-builder",
+      "name": "📝 Response Builder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build error response\nconst inputData = $('✅ Input Validator').item.json;\nreturn [{\n  json: {\n    success: false,\n    session_id: inputData.session_id,\n    query: inputData.query,\n    answer: 'Maaf, terjadi kesalahan pada sistem AI. Silakan coba kembali dalam beberapa saat.',\n    error: 'API_ERROR',\n    metadata: { engine: 'agrisensa-rag-v2', timestamp: new Date().toISOString(), workflow: 'WF-01' }\n  }\n}];"
+      },
+      "id": "wf01-error-builder",
+      "name": "❌ Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 520]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO chat_history (session_id, role, content, route, tool_used, tool_params, tool_result, sources, created_at)\nVALUES\n  ('{{ $('✅ Input Validator').item.json.session_id }}', 'user', '{{ $('✅ Input Validator').item.json.query.replace(/'/g, \"''\") }}', null, null, null, null, '[]', NOW()),\n  ('{{ $('✅ Input Validator').item.json.session_id }}', 'assistant', '{{ $json.answer.replace(/'/g, \"''\") }}', '{{ $json.route }}', {{ $json.tool_used ? \"'\" + $json.tool_used + \"'\" : 'NULL' }}, '{{ JSON.stringify($json.tool_result || {}) }}', '{{ JSON.stringify($json.tool_result || {}) }}', '{{ JSON.stringify($json.sources || []) }}', NOW())\nON CONFLICT DO NOTHING;",
+        "additionalFields": {}
+      },
+      "id": "wf01-save-history",
+      "name": "💾 Save Chat History (PG)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1550, 300],
+      "credentials": {"postgres": {"id": "agrisensa-postgres", "name": "AgriSensa PostgreSQL"}},
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.success ? 200 : 500 }}",
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "WF-01-RAG-Chat"},
+              {"name": "X-Session-ID", "value": "={{ $('✅ Input Validator').item.json.session_id }}"}
+            ]
+          }
+        }
+      },
+      "id": "wf01-respond",
+      "name": "📤 Respond to Client",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1780, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge branches from IF node\nreturn $input.all();"
+      },
+      "id": "wf01-merge",
+      "name": "🔗 Merge Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1550, 400]
+    }
+  ],
+  "connections": {
+    "🗣️ Chat Webhook": {"main": [[{"node": "✅ Input Validator", "type": "main", "index": 0}]]},
+    "✅ Input Validator": {"main": [[{"node": "📂 Load Session (Redis)", "type": "main", "index": 0}]]},
+    "📂 Load Session (Redis)": {"main": [[{"node": "🤖 AgriSensa AI Core API", "type": "main", "index": 0}]]},
+    "🤖 AgriSensa AI Core API": {"main": [[{"node": "❓ API Success?", "type": "main", "index": 0}]]},
+    "❓ API Success?": {
+      "main": [
+        [{"node": "📝 Response Builder", "type": "main", "index": 0}],
+        [{"node": "❌ Error Response", "type": "main", "index": 0}]
+      ]
+    },
+    "📝 Response Builder": {"main": [[{"node": "💾 Save Chat History (PG)", "type": "main", "index": 0}]]},
+    "❌ Error Response": {"main": [[{"node": "🔗 Merge Responses", "type": "main", "index": 0}]]},
+    "💾 Save Chat History (PG)": {"main": [[{"node": "🔗 Merge Responses", "type": "main", "index": 0}]]},
+    "🔗 Merge Responses": {"main": [[{"node": "📤 Respond to Client", "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true},
+  "tags": ["agrisensa", "chat", "rag", "ai"],
+  "meta": {"description": "Agentic RAG Chat Engine with session management and PostgreSQL history persistence"}
+}

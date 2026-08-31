@@ -1,0 +1,26 @@
+{
+  "exported_at": "2025-11-30T19:11:17.615082",
+  "statistics": {
+    "total_polygons": 0,
+    "total_area_sqm": 0,
+    "total_area_hectares": 0.0,
+    "total_npk_samples": 1,
+    "total_markers": 0,
+    "marker_types": {}
+  },
+  "polygons": [],
+  "npk_data": [
+    {
+      "id": "3310fa0f-7dd8-4919-b5bb-beaf77e2e5d7",
+      "latitude": 34.6151265,
+      "longitude": 137.11418149999997,
+      "n_value": 30,
+      "p_value": 40,
+      "k_value": 49,
+      "polygon_id": null,
+      "notes": "",
+      "created_at": "2025-11-30T19:07:13.718997"
+    }
+  ],
+  "markers": []
+}

@@ -1,0 +1,40 @@
+stages:
+  preprocess:
+    cmd: python src/preprocess.py
+    deps:
+      - src/preprocess.py
+      - data/raw/yield.csv
+    params:
+      - data.raw_path
+      - data.processed_dir
+      - data.test_size
+      - base.random_state
+    outs:
+      - data/processed/train.csv
+      - data/processed/test.csv
+
+  train:
+    cmd: python src/train.py
+    deps:
+      - src/train.py
+      - data/processed/train.csv
+    params:
+      - base.random_state
+      - train.estimator
+      - train.n_estimators
+      - train.max_depth
+      - train.model_path
+    outs:
+      - models/yield_model.pkl
+
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - data/processed/test.csv
+      - models/yield_model.pkl
+    params:
+      - evaluate.metrics_path
+    metrics:
+      - evaluation.json:
+          cache: false

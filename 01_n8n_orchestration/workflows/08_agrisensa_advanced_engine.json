@@ -1,0 +1,275 @@
+{
+  "name": "WF-08: AgriSensa Advanced AI Engine (RAB + Monte Carlo + JA + Carbon + Forecast + PDF)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/advanced",
+        "responseMode": "responseNode",
+        "options": {"allowedOrigins": "*"}
+      },
+      "id": "wf08-webhook",
+      "name": "🌾 Webhook Node",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ═══════════════════════════════════════════════════\n// CORE AI AGENT NODE — Request Validation & Enrichment\n// ═══════════════════════════════════════════════════\nconst body = $input.first().json.body || $input.first().json;\n\n// Validate required fields\nconst komoditas = body.komoditas || body.commodity || 'padi';\nconst modul     = body.modul || body.module || 'auto';\n\n// Auto-detect module from intent keywords\nconst text = JSON.stringify(body).toLowerCase();\nlet detectedModul = modul;\nif (modul === 'auto') {\n  if (text.includes('rab') || text.includes('anggaran') || text.includes('biaya'))\n    detectedModul = 'rab';\n  else if (text.includes('monte') || text.includes('simulasi') || text.includes('iterasi'))\n    detectedModul = 'monte_carlo';\n  else if (text.includes('harga') || text.includes('pasar') || text.includes('ja') || text.includes('japan'))\n    detectedModul = 'market';\n  else if (text.includes('karbon') || text.includes('carbon') || text.includes('co2') || text.includes('emisi'))\n    detectedModul = 'carbon';\n  else if (text.includes('prediksi') || text.includes('forecast') || text.includes('yield'))\n    detectedModul = 'forecast';\n  else if (text.includes('pdf') || text.includes('laporan') || text.includes('report'))\n    detectedModul = 'pdf';\n  else\n    detectedModul = 'pipeline';  // Default: full pipeline\n}\n\n// Enrich request with defaults\nconst enriched = {\n  modul: detectedModul,\n  komoditas: komoditas,\n  luas_ha: parseFloat(body.luas_ha || 1.0),\n  harga_jual_rp_kg: parseFloat(body.harga_jual_rp_kg || 4500),\n  estimasi_yield_ton_ha: parseFloat(body.estimasi_yield_ton_ha || 6.0),\n  curah_hujan_mm: parseFloat(body.curah_hujan_mm || 1500),\n  ph_tanah: parseFloat(body.ph_tanah || 6.5),\n  suhu_rata_c: parseFloat(body.suhu_rata_c || 27),\n  npk_n: parseFloat(body.npk_n || 100),\n  npk_p: parseFloat(body.npk_p || 60),\n  npk_k: parseFloat(body.npk_k || 60),\n  is_sawah: Boolean(body.is_sawah || false),\n  carbon_sink_pohon: parseInt(body.carbon_sink_pohon || 0),\n  n_iterations: parseInt(body.n_iterations || 10000),\n  language: body.language || 'id',\n  generate_pdf: body.generate_pdf !== false,\n  include_ja_market: body.include_ja_market !== false,\n  original_body: body,\n  request_id: `adv_${Date.now()}`,\n  timestamp: new Date().toISOString(),\n};\n\nreturn [{ json: enriched }];"
+      },
+      "id": "wf08-agent",
+      "name": "🤖 Core AI Agent Node",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {"conditions": {"conditions": [{"leftValue": "={{ $json.modul }}", "rightValue": "rab", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputKey": "RAB"},
+            {"conditions": {"conditions": [{"leftValue": "={{ $json.modul }}", "rightValue": "monte_carlo", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputKey": "MonteCarlo"},
+            {"conditions": {"conditions": [{"leftValue": "={{ $json.modul }}", "rightValue": "market", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputKey": "JAMarket"},
+            {"conditions": {"conditions": [{"leftValue": "={{ $json.modul }}", "rightValue": "carbon", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputKey": "Carbon"},
+            {"conditions": {"conditions": [{"leftValue": "={{ $json.modul }}", "rightValue": "forecast", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputKey": "Forecast"},
+            {"conditions": {"conditions": [{"leftValue": "={{ $json.modul }}", "rightValue": "pipeline", "operator": {"type": "string", "operation": "equals"}}]}, "renameOutput": true, "outputKey": "Pipeline"}
+          ]
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "wf08-router",
+      "name": "🔀 Router Node",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://localhost:8001' }}/rab/calculate",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"komoditas\": \"{{ $json.komoditas }}\",\n  \"luas_ha\": {{ $json.luas_ha }},\n  \"estimasi_yield_ton_ha\": {{ $json.estimasi_yield_ton_ha }},\n  \"harga_jual_rp_kg\": {{ $json.harga_jual_rp_kg }},\n  \"musim_tanam_bulan\": 4\n}",
+        "options": {"timeout": 30000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf08-rab",
+      "name": "📊 RAB Processor Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 150]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://localhost:8001' }}/monte-carlo/simulate",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"total_biaya_rp\": {{ $('🤖 Core AI Agent Node').item.json.luas_ha * 12500000 }},\n  \"estimasi_yield_ton_ha\": {{ $('🤖 Core AI Agent Node').item.json.estimasi_yield_ton_ha }},\n  \"harga_jual_rp_kg\": {{ $('🤖 Core AI Agent Node').item.json.harga_jual_rp_kg }},\n  \"luas_ha\": {{ $('🤖 Core AI Agent Node').item.json.luas_ha }},\n  \"n_iterations\": {{ $('🤖 Core AI Agent Node').item.json.n_iterations }},\n  \"use_triangular_price\": true\n}",
+        "options": {"timeout": 60000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf08-mc",
+      "name": "🎲 Monte Carlo Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.vegemap.naro.go.jp/agri/agri_menu.asp?pref=00&veg={{ encodeURIComponent($('🤖 Core AI Agent Node').item.json.komoditas) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Accept-Language", "value": "ja,id;q=0.9,en;q=0.8"},
+            {"name": "User-Agent", "value": "AgriSensa-JA-Intelligence/2.0"}
+          ]
+        },
+        "options": {"timeout": 15000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf08-ja-fetch",
+      "name": "📡 JA Fetch Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 450]
+    },
+    {
+      "parameters": {
+        "jsCode": "// HTML Extract Node — Parse JA Market HTML\n// Extract 入荷量 and price data from JA market pages\nconst rawHtml = $input.first().json.data || $input.first().json.body || '';\nconst commodity = $('🤖 Core AI Agent Node').item.json.komoditas;\n\n// Try to extract price tables from HTML\nlet extractedData = {\n  commodity: commodity,\n  html_available: rawHtml.length > 100,\n  prices_found: [],\n  volumes_found: [],\n  parse_method: 'regex',\n};\n\nif (typeof rawHtml === 'string' && rawHtml.includes('円')) {\n  // Extract prices (円)\n  const priceMatches = rawHtml.match(/(\\d{2,5})円/g) || [];\n  extractedData.prices_found = priceMatches\n    .map(m => parseInt(m.replace('円', '')))\n    .filter(p => p >= 50 && p <= 10000)\n    .slice(0, 10);\n\n  // Extract volumes (ton or kg)\n  const volMatches = rawHtml.match(/(\\d+(?:\\.\\d+)?)\\s*(?:トン|ton)/gi) || [];\n  extractedData.volumes_found = volMatches\n    .map(m => parseFloat(m.replace(/[^\\d.]/g, '')))\n    .slice(0, 5);\n}\n\n// If scraping failed, pass through for API fallback\nextractedData.use_api_fallback = extractedData.prices_found.length === 0;\n\nreturn [{ json: {\n  ...($('🤖 Core AI Agent Node').item.json),\n  scraped_data: extractedData,\n}}];"
+      },
+      "id": "wf08-html-extract",
+      "name": "🔍 HTML Extract Node",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 450]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://localhost:8001' }}/market/ja-intel",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"commodity\": \"{{ $json.scraped_data?.commodity || $json.komoditas }}\",\n  \"region\": \"kanto\",\n  \"days\": 30,\n  \"jpy_idr_rate\": 105,\n  \"scraped_prices\": {{ JSON.stringify($json.scraped_data?.prices_found || []) }}\n}",
+        "options": {"timeout": 20000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf08-normalizer",
+      "name": "⚙️ Normalizer Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 450]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://localhost:8001' }}/carbon/calculate",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"komoditas\": \"{{ $('🤖 Core AI Agent Node').item.json.komoditas }}\",\n  \"luas_ha\": {{ $('🤖 Core AI Agent Node').item.json.luas_ha }},\n  \"is_sawah\": {{ $('🤖 Core AI Agent Node').item.json.is_sawah }},\n  \"carbon_sink_pohon\": {{ $('🤖 Core AI Agent Node').item.json.carbon_sink_pohon }},\n  \"periode_tahun\": 1.0\n}",
+        "options": {"timeout": 20000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf08-carbon",
+      "name": "🌿 Carbon Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://localhost:8001' }}/forecast/predict",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"komoditas\": \"{{ $('🤖 Core AI Agent Node').item.json.komoditas }}\",\n  \"current_price_rp_kg\": {{ $('🤖 Core AI Agent Node').item.json.harga_jual_rp_kg }},\n  \"npk_n\": {{ $('🤖 Core AI Agent Node').item.json.npk_n }},\n  \"npk_p\": {{ $('🤖 Core AI Agent Node').item.json.npk_p }},\n  \"npk_k\": {{ $('🤖 Core AI Agent Node').item.json.npk_k }},\n  \"curah_hujan_mm\": {{ $('🤖 Core AI Agent Node').item.json.curah_hujan_mm }},\n  \"ph_tanah\": {{ $('🤖 Core AI Agent Node').item.json.ph_tanah }},\n  \"suhu_rata_c\": {{ $('🤖 Core AI Agent Node').item.json.suhu_rata_c }}\n}",
+        "options": {"timeout": 20000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf08-forecast",
+      "name": "📈 Forecasting Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 750]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://localhost:8001' }}/language/switch",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"modul\": \"{{ $('🤖 Core AI Agent Node').item.json.modul !== 'pipeline' ? $('🤖 Core AI Agent Node').item.json.modul : 'rab' }}\",\n  \"language\": \"{{ $('🤖 Core AI Agent Node').item.json.language }}\",\n  \"data\": {{ JSON.stringify($input.first().json) }}\n}",
+        "options": {"timeout": 30000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf08-mcp-switch",
+      "name": "🌐 MCP Language Switch Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://localhost:8001' }}/pdf/generate",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"modul\": \"{{ $('🤖 Core AI Agent Node').item.json.modul !== 'pipeline' ? $('🤖 Core AI Agent Node').item.json.modul : 'full' }}\",\n  \"language\": \"{{ $('🤖 Core AI Agent Node').item.json.language }}\",\n  \"data\": {{ JSON.stringify($input.first().json) }}\n}",
+        "options": {"timeout": 60000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf08-pdf",
+      "name": "📄 PDF Generator Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ═══════════════════════════════════════════════════\n// RETURN NODE — Format final response ke UI\n// ═══════════════════════════════════════════════════\nconst pdfResult    = $input.first().json;\nconst agentData    = $('🤖 Core AI Agent Node').item.json;\nconst langResult   = $('🌐 MCP Language Switch Node').item.json;\n\n// Collect all module results\nconst modules_run = [];\nconst results = {};\n\n// Try to get RAB result\ntry { results.rab = $('📊 RAB Processor Node').item.json; modules_run.push('rab'); } catch(e) {}\ntry { results.monte_carlo = $('🎲 Monte Carlo Node').item.json; modules_run.push('monte_carlo'); } catch(e) {}\ntry { results.ja_market = $('⚙️ Normalizer Node').item.json; modules_run.push('ja_market'); } catch(e) {}\ntry { results.carbon = $('🌿 Carbon Node').item.json; modules_run.push('carbon'); } catch(e) {}\ntry { results.forecast = $('📈 Forecasting Node').item.json; modules_run.push('forecast'); } catch(e) {}\n\n// Build summary card\nconst summary = {\n  komoditas: agentData.komoditas,\n  luas_ha: agentData.luas_ha,\n  modul_dijalankan: modules_run,\n};\n\n// Add key metrics from available results\nif (results.rab?.data) {\n  summary.roi_persen = results.rab.data.roi_persen;\n  summary.keuntungan_rp = results.rab.data.keuntungan_bersih_rp;\n  summary.bep_ton = results.rab.data.bep_ton;\n}\nif (results.monte_carlo?.data) {\n  summary.prob_untung_pct = results.monte_carlo.data.prob_untung_persen;\n  summary.roi_p50 = results.monte_carlo.data.roi_distribution?.p50;\n}\nif (results.ja_market?.data) {\n  summary.harga_jepang_yen = results.ja_market.data.current_price_jpy;\n  summary.peluang_ekspor = results.ja_market.data.export_opportunity;\n}\nif (results.carbon?.data) {\n  summary.co2_total_ton = results.carbon.data.total_co2e_ton;\n  summary.carbon_credit_usd = results.carbon.data.carbon_credit_usd;\n}\nif (results.forecast?.data) {\n  summary.prediksi_yield = results.forecast.data.yield_forecast_ton_ha;\n  summary.risk_level = results.forecast.data.risk?.level;\n}\n\nreturn [{\n  json: {\n    success: true,\n    request_id: agentData.request_id,\n    summary: summary,\n    results: results,\n    bilingual_labels: langResult?.data || {},\n    pdf: pdfResult?.success ? {\n      filename: pdfResult.filename,\n      size_kb: pdfResult.size_kb,\n      pdf_base64: pdfResult.pdf_base64,\n    } : null,\n    metadata: {\n      engine: 'agrisensa-advanced-ai-engine-v1',\n      workflow: 'WF-08',\n      modules_count: modules_run.length,\n      timestamp: new Date().toISOString(),\n    }\n  }\n}];"
+      },
+      "id": "wf08-return",
+      "name": "📦 Return Node",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "WF-08-Advanced-AI-Engine"},
+              {"name": "X-AgriSensa-Version", "value": "1.0.0"}
+            ]
+          }
+        }
+      },
+      "id": "wf08-respond",
+      "name": "📤 Respond to UI",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2200, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://localhost:8001' }}/pipeline/full",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"komoditas\": \"{{ $json.komoditas }}\",\n  \"luas_ha\": {{ $json.luas_ha }},\n  \"harga_jual_rp_kg\": {{ $json.harga_jual_rp_kg }},\n  \"estimasi_yield_ton_ha\": {{ $json.estimasi_yield_ton_ha }},\n  \"curah_hujan_mm\": {{ $json.curah_hujan_mm }},\n  \"ph_tanah\": {{ $json.ph_tanah }},\n  \"is_sawah\": {{ $json.is_sawah }},\n  \"carbon_sink_pohon\": {{ $json.carbon_sink_pohon }},\n  \"n_iterations\": {{ $json.n_iterations }},\n  \"language\": \"{{ $json.language }}\",\n  \"generate_pdf\": {{ $json.generate_pdf }},\n  \"include_ja_market\": {{ $json.include_ja_market }}\n}",
+        "options": {"timeout": 120000, "response": {"response": {"neverError": true}}}
+      },
+      "id": "wf08-pipeline",
+      "name": "🚀 Full Pipeline Node",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 900]
+    }
+  ],
+  "connections": {
+    "🌾 Webhook Node": {"main": [[{"node": "🤖 Core AI Agent Node", "type": "main", "index": 0}]]},
+    "🤖 Core AI Agent Node": {"main": [[{"node": "🔀 Router Node", "type": "main", "index": 0}]]},
+    "🔀 Router Node": {
+      "main": [
+        [{"node": "📊 RAB Processor Node",   "type": "main", "index": 0}],
+        [{"node": "🎲 Monte Carlo Node",      "type": "main", "index": 0}],
+        [{"node": "📡 JA Fetch Node",         "type": "main", "index": 0}],
+        [{"node": "🌿 Carbon Node",           "type": "main", "index": 0}],
+        [{"node": "📈 Forecasting Node",      "type": "main", "index": 0}],
+        [{"node": "🚀 Full Pipeline Node",    "type": "main", "index": 0}]
+      ]
+    },
+    "📡 JA Fetch Node":          {"main": [[{"node": "🔍 HTML Extract Node",  "type": "main", "index": 0}]]},
+    "🔍 HTML Extract Node":      {"main": [[{"node": "⚙️ Normalizer Node",     "type": "main", "index": 0}]]},
+    "📊 RAB Processor Node":     {"main": [[{"node": "🌐 MCP Language Switch Node", "type": "main", "index": 0}]]},
+    "🎲 Monte Carlo Node":       {"main": [[{"node": "🌐 MCP Language Switch Node", "type": "main", "index": 0}]]},
+    "⚙️ Normalizer Node":        {"main": [[{"node": "🌐 MCP Language Switch Node", "type": "main", "index": 0}]]},
+    "🌿 Carbon Node":            {"main": [[{"node": "🌐 MCP Language Switch Node", "type": "main", "index": 0}]]},
+    "📈 Forecasting Node":       {"main": [[{"node": "🌐 MCP Language Switch Node", "type": "main", "index": 0}]]},
+    "🚀 Full Pipeline Node":     {"main": [[{"node": "🌐 MCP Language Switch Node", "type": "main", "index": 0}]]},
+    "🌐 MCP Language Switch Node": {"main": [[{"node": "📄 PDF Generator Node", "type": "main", "index": 0}]]},
+    "📄 PDF Generator Node":     {"main": [[{"node": "📦 Return Node", "type": "main", "index": 0}]]},
+    "📦 Return Node":            {"main": [[{"node": "📤 Respond to UI",  "type": "main", "index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner"},
+  "tags": ["agrisensa", "rab", "monte-carlo", "market-intel", "carbon", "forecasting", "pdf", "advanced"],
+  "meta": {
+    "description": "WF-08: Advanced AI Engine — 11 nodes: Webhook → Agent → Router → [RAB|MC|JA(Fetch+HTML+Normalize)|Carbon|Forecast|Pipeline] → MCP Switch → PDF → Return"
+  }
+}
