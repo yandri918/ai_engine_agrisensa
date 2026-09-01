@@ -57,3 +57,5 @@ uploads/temp_images/*
 .idea/
 .DS_Store
 Thumbs.db
+
+.vercel
