@@ -1,188 +1,374 @@
 "use client";
 
 import React, { useState } from "react";
-import { CommodityPrice } from "@/lib/types";
 import {
-  LineChart as ChartIcon,
   TrendingUp,
   TrendingDown,
-  Globe2,
+  Globe,
   ArrowUpRight,
-  RefreshCw,
-  Search,
+  Sparkles,
+  BarChart2,
+  Calendar,
+  Layers,
   Filter,
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+
+interface Commodity {
+  id: string;
+  name: string;
+  category: "Pangan" | "Hortikultura" | "Perkebunan";
+  country: "ID" | "JP";
+  currentPrice: number;
+  unit: string;
+  change7d: number;
+  change30d: number;
+  trend: "up" | "down";
+  history: Array<{ day: string; price: number }>;
+  analysis: string;
+}
+
+const COMMODITY_DATA: Commodity[] = [
+  {
+    id: "beras-premium",
+    name: "Beras Premium (Setra Ramos)",
+    category: "Pangan",
+    country: "ID",
+    currentPrice: 15400,
+    unit: "kg",
+    change7d: 2.1,
+    change30d: 4.8,
+    trend: "up",
+    history: [
+      { day: "H-6", price: 14900 },
+      { day: "H-5", price: 15000 },
+      { day: "H-4", price: 15150 },
+      { day: "H-3", price: 15200 },
+      { day: "H-2", price: 15300 },
+      { day: "H-1", price: 15350 },
+      { day: "Hari Ini", price: 15400 },
+    ],
+    analysis: "Kenaikan moderat akibat penyesuaian HET dan keterbatasan pasokan gabah kering giling jelang musim panen raya.",
+  },
+  {
+    id: "cabai-rawit",
+    name: "Cabai Rawit Merah",
+    category: "Hortikultura",
+    country: "ID",
+    currentPrice: 42500,
+    unit: "kg",
+    change7d: -6.5,
+    change30d: 14.2,
+    trend: "down",
+    history: [
+      { day: "H-6", price: 46000 },
+      { day: "H-5", price: 45000 },
+      { day: "H-4", price: 44500 },
+      { day: "H-3", price: 43800 },
+      { day: "H-2", price: 43000 },
+      { day: "H-1", price: 42800 },
+      { day: "Hari Ini", price: 42500 },
+    ],
+    analysis: "Koreksi harga harian seiring masuknya pasokan panen serentak dari sentra Jawa Timur dan Jawa Tengah.",
+  },
+  {
+    id: "bawang-merah",
+    name: "Bawang Merah Brebes",
+    category: "Hortikultura",
+    country: "ID",
+    currentPrice: 34000,
+    unit: "kg",
+    change7d: 3.8,
+    change30d: 8.5,
+    trend: "up",
+    history: [
+      { day: "H-6", price: 32500 },
+      { day: "H-5", price: 32800 },
+      { day: "H-4", price: 33000 },
+      { day: "H-3", price: 33400 },
+      { day: "H-2", price: 33700 },
+      { day: "H-1", price: 33900 },
+      { day: "Hari Ini", price: 34000 },
+    ],
+    analysis: "Permintaan pasar stabil tinggi dengan serapan industri olahan bumbu yang terus meningkat.",
+  },
+  {
+    id: "jagung-pipil",
+    name: "Jagung Pipil Kering (Kadar Air 14%)",
+    category: "Pangan",
+    country: "ID",
+    currentPrice: 5600,
+    unit: "kg",
+    change7d: 1.4,
+    change30d: -2.1,
+    trend: "up",
+    history: [
+      { day: "H-6", price: 5450 },
+      { day: "H-5", price: 5480 },
+      { day: "H-4", price: 5500 },
+      { day: "H-3", price: 5520 },
+      { day: "H-2", price: 5550 },
+      { day: "H-1", price: 5580 },
+      { day: "Hari Ini", price: 5600 },
+    ],
+    analysis: "Permintaan dari pabrik pakan ternak (feedmill) stabil dengan ketersediaan stok domestik yang terjaga.",
+  },
+  {
+    id: "sawit-tbs",
+    name: "TBS Kelapa Sawit (Riau/Sumut)",
+    category: "Perkebunan",
+    country: "ID",
+    currentPrice: 2850,
+    unit: "kg",
+    change7d: 4.2,
+    change30d: 9.8,
+    trend: "up",
+    history: [
+      { day: "H-6", price: 2710 },
+      { day: "H-5", price: 2740 },
+      { day: "H-4", price: 2780 },
+      { day: "H-3", price: 2800 },
+      { day: "H-2", price: 2820 },
+      { day: "H-1", price: 2840 },
+      { day: "Hari Ini", price: 2850 },
+    ],
+    analysis: "Didorong oleh penguatan harga minyak sawit mentah (CPO) di bursa komoditas internasional (MDEX).",
+  },
+  {
+    id: "koshihikari-rice",
+    name: "Beras Koshihikari (Niigata)",
+    category: "Pangan",
+    country: "JP",
+    currentPrice: 620,
+    unit: "kg (¥)",
+    change7d: 1.8,
+    change30d: 3.5,
+    trend: "up",
+    history: [
+      { day: "H-6", price: 605 },
+      { day: "H-5", price: 608 },
+      { day: "H-4", price: 610 },
+      { day: "H-3", price: 612 },
+      { day: "H-2", price: 615 },
+      { day: "H-1", price: 618 },
+      { day: "Hari Ini", price: 620 },
+    ],
+    analysis: "Pasar beras premium Jepang stabil dengan preferensi kuat terhadap beras kualitas First Grade (一等米).",
+  },
+  {
+    id: "nagano-apple",
+    name: "Apel Fuji (Nagano)",
+    category: "Hortikultura",
+    country: "JP",
+    currentPrice: 480,
+    unit: "piece (¥)",
+    change7d: 0.5,
+    change30d: -1.2,
+    trend: "up",
+    history: [
+      { day: "H-6", price: 475 },
+      { day: "H-5", price: 476 },
+      { day: "H-4", price: 478 },
+      { day: "H-3", price: 478 },
+      { day: "H-2", price: 479 },
+      { day: "H-1", price: 480 },
+      { day: "Hari Ini", price: 480 },
+    ],
+    analysis: "Permintaan retail stabil didukung oleh sistem cold storage otomatis dan standar kontrol brix tinggi.",
+  },
+];
 
 export default function MarketPage() {
-  const [filterCountry, setFilterCountry] = useState<"All" | "Indonesia" | "Japan">("All");
+  const [selectedCountry, setSelectedCountry] = useState<"ALL" | "ID" | "JP">("ALL");
+  const [selectedCommodity, setSelectedCommodity] = useState<Commodity>(COMMODITY_DATA[0]);
 
-  const commodities: CommodityPrice[] = [
-    {
-      commodity: "Gabah Kering Panen (GKP)",
-      country: "Indonesia",
-      current_price: 6850,
-      currency: "IDR/kg",
-      change_24h: 2.4,
-      trend: "up",
-      last_updated: "Hari ini, 08:30 WIB",
-      historical_7d: [6400, 6500, 6550, 6600, 6700, 6750, 6850],
-    },
-    {
-      commodity: "Beras Koshihikari Super",
-      country: "Japan",
-      current_price: 540,
-      currency: "JPY/kg",
-      change_24h: 1.1,
-      trend: "up",
-      last_updated: "Hari ini, 10:15 JST",
-      historical_7d: [520, 525, 530, 530, 535, 538, 540],
-    },
-    {
-      commodity: "Cabai Merah Keriting",
-      country: "Indonesia",
-      current_price: 48500,
-      currency: "IDR/kg",
-      change_24h: -3.8,
-      trend: "down",
-      last_updated: "Hari ini, 07:45 WIB",
-      historical_7d: [52000, 51000, 50500, 50000, 49000, 49500, 48500],
-    },
-    {
-      commodity: "Bawang Merah Brebes Super",
-      country: "Indonesia",
-      current_price: 36000,
-      currency: "IDR/kg",
-      change_24h: 4.2,
-      trend: "up",
-      last_updated: "Hari ini, 09:00 WIB",
-      historical_7d: [33000, 33500, 34000, 34500, 35000, 35200, 36000],
-    },
-    {
-      commodity: "Jagung Pipil Kering (Pakan)",
-      country: "Indonesia",
-      current_price: 5400,
-      currency: "IDR/kg",
-      change_24h: 0.0,
-      trend: "stable",
-      last_updated: "Hari ini, 08:00 WIB",
-      historical_7d: [5400, 5400, 5350, 5400, 5450, 5400, 5400],
-    },
-    {
-      commodity: "Ubi Jalar Jepang (Beni Haruka)",
-      country: "Japan",
-      current_price: 420,
-      currency: "JPY/kg",
-      change_24h: 2.8,
-      trend: "up",
-      last_updated: "Hari ini, 11:00 JST",
-      historical_7d: [390, 395, 400, 405, 410, 415, 420],
-    },
-  ];
-
-  const filtered = filterCountry === "All" ? commodities : commodities.filter((c) => c.country === filterCountry);
+  const filtered = COMMODITY_DATA.filter((c) =>
+    selectedCountry === "ALL" ? true : c.country === selectedCountry
+  );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl glass-panel border border-emerald-500/20 shadow-xl">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-            <ChartIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2 font-['Plus_Jakarta_Sans']">
-              <span>Intelijen Pasar & Harga Komoditas</span>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-semibold border border-emerald-500/30">
-                Indonesia & Japan Market
-              </span>
+      <div className="relative overflow-hidden rounded-3xl glass-panel p-6 md:p-8 border border-emerald-500/30 shadow-2xl bg-gradient-to-r from-slate-950 via-[#091515] to-slate-950">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
+              <Globe className="w-3.5 h-3.5" />
+              <span>Multi-Region Commodity Analytics</span>
+            </div>
+            <h1 className="text-2xl md:text-4xl font-extrabold text-white font-['Plus_Jakarta_Sans'] tracking-tight">
+              Intelijen Pasar <span className="text-emerald-400">Komoditas Pertanian</span>
             </h1>
-            <p className="text-xs md:text-sm text-slate-300">
-              Pantauan pergerakan harga riil komoditas pertanian, tren fluktuasi 7 hari, dan perbandingan lintas pasar
+            <p className="text-xs md:text-sm text-slate-300 max-w-2xl leading-relaxed">
+              Pantauan pergerakan harga harian, tren fluktuasi 7 hari, dan analitik volatilitas komoditas strategis Indonesia 🇮🇩 dan Jepang 🇯🇵.
             </p>
           </div>
-        </div>
 
-        {/* Country Filter Toggle */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl w-fit">
-          {(["All", "Indonesia", "Japan"] as const).map((country) => (
+          {/* Country Tabs */}
+          <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shrink-0">
             <button
-              key={country}
-              onClick={() => setFilterCountry(country)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                filterCountry === country
-                  ? "bg-emerald-500 text-slate-950 shadow-sm"
+              onClick={() => setSelectedCountry("ALL")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                selectedCountry === "ALL"
+                  ? "bg-emerald-500 text-slate-950 shadow-md"
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              {country === "All" ? "Semua Pasar" : country}
+              Semua Komoditas
             </button>
-          ))}
+            <button
+              onClick={() => setSelectedCountry("ID")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
+                selectedCountry === "ID"
+                  ? "bg-emerald-500 text-slate-950 shadow-md"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>🇮🇩 Indonesia</span>
+            </button>
+            <button
+              onClick={() => setSelectedCountry("JP")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
+                selectedCountry === "JP"
+                  ? "bg-emerald-500 text-slate-950 shadow-md"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>🇯🇵 Jepang</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Commodity Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map((item) => (
-          <div
-            key={item.commodity}
-            className="glass-panel p-5 rounded-2xl border border-slate-800 glass-panel-hover flex flex-col justify-between space-y-4"
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400">
-                  {item.country === "Indonesia" ? "🇮🇩 Pasar Indonesia" : "🇯🇵 Pasar Jepang"}
-                </span>
-                <div
-                  className={`flex items-center gap-1 text-xs font-bold font-mono ${
-                    item.trend === "up"
-                      ? "text-emerald-400"
-                      : item.trend === "down"
-                      ? "text-rose-400"
-                      : "text-slate-400"
-                  }`}
-                >
-                  {item.trend === "up" && <TrendingUp className="w-3.5 h-3.5" />}
-                  {item.trend === "down" && <TrendingDown className="w-3.5 h-3.5" />}
-                  <span>{item.change_24h > 0 ? `+${item.change_24h}%` : `${item.change_24h}%`}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Commodity List (5 Cols) */}
+        <div className="lg:col-span-5 space-y-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Daftar Komoditas Pantauan:</p>
+          <div className="space-y-2.5">
+            {filtered.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setSelectedCommodity(item)}
+                className={`w-full p-4 rounded-2xl text-left transition-all border flex items-center justify-between ${
+                  selectedCommodity.id === item.id
+                    ? "bg-slate-900 border-emerald-500/50 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/30"
+                    : "glass-panel border-slate-800/80 hover:border-slate-700 text-slate-300"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{item.country === "ID" ? "🇮🇩" : "🇯🇵"}</span>
+                    <h3 className="font-bold text-sm text-white">{item.name}</h3>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">{item.category}</span>
                 </div>
-              </div>
 
-              <h3 className="text-base font-bold text-white mt-3 leading-snug">{item.commodity}</h3>
+                <div className="text-right">
+                  <div className="font-bold text-sm font-['Outfit'] text-white">
+                    {item.country === "ID" ? `Rp ${item.currentPrice.toLocaleString("id-ID")}` : `¥ ${item.currentPrice}`}{" "}
+                    <span className="text-[10px] text-slate-400 font-normal">/{item.unit}</span>
+                  </div>
+                  <div
+                    className={`flex items-center justify-end gap-1 text-[11px] font-semibold ${
+                      item.change7d >= 0 ? "text-emerald-400" : "text-rose-400"
+                    }`}
+                  >
+                    {item.change7d >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    <span>{item.change7d >= 0 ? `+${item.change7d}%` : `${item.change7d}%`} (7h)</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
 
-              <div className="mt-2">
-                <span className="text-2xl font-black text-white font-['Outfit']">
-                  {item.currency === "IDR/kg"
-                    ? `Rp ${item.current_price.toLocaleString("id-ID")}`
-                    : `¥ ${item.current_price.toLocaleString("ja-JP")}`}
-                </span>
-                <span className="text-xs text-slate-400 font-medium ml-1.5">/ kg</span>
+        {/* Selected Commodity Interactive Chart (7 Cols) */}
+        <div className="lg:col-span-7 glass-panel p-6 rounded-3xl border border-slate-800 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-base">{selectedCommodity.country === "ID" ? "🇮🇩" : "🇯🇵"}</span>
+                <h2 className="text-xl font-bold text-white font-['Plus_Jakarta_Sans']">
+                  {selectedCommodity.name}
+                </h2>
               </div>
+              <p className="text-xs text-slate-400 mt-0.5">Grafik Pergerakan Harga 7 Hari Terakhir</p>
             </div>
 
-            {/* 7-Day Sparkline simulation bar */}
-            <div className="pt-3 border-t border-slate-800/80 space-y-1.5">
-              <div className="flex justify-between text-[10px] text-slate-400">
-                <span>Tren 7 Hari Terakhir</span>
-                <span className="font-mono">{item.last_updated}</span>
-              </div>
-              <div className="flex items-end gap-1.5 h-8 pt-1">
-                {item.historical_7d.map((val, idx) => {
-                  const min = Math.min(...item.historical_7d);
-                  const max = Math.max(...item.historical_7d);
-                  const heightPercent = max === min ? 50 : Math.round(((val - min) / (max - min)) * 75) + 25;
-                  return (
-                    <div
-                      key={idx}
-                      className="flex-1 bg-emerald-500/20 hover:bg-emerald-400 rounded-t transition-colors"
-                      style={{ height: `${heightPercent}%` }}
-                      title={`Hari ${idx + 1}: ${val}`}
-                    ></div>
-                  );
-                })}
-              </div>
+            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-right">
+              <span className="text-[10px] font-bold block uppercase text-slate-400">Harga Terkini</span>
+              <span className="text-xl font-black font-['Outfit'] text-emerald-300">
+                {selectedCommodity.country === "ID"
+                  ? `Rp ${selectedCommodity.currentPrice.toLocaleString("id-ID")}`
+                  : `¥ ${selectedCommodity.currentPrice}`}{" "}
+                <span className="text-xs font-normal text-slate-400">/{selectedCommodity.unit}</span>
+              </span>
             </div>
           </div>
-        ))}
+
+          {/* Area Chart */}
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={selectedCommodity.history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="day" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                <YAxis
+                  stroke="#94a3b8"
+                  tick={{ fill: "#94a3b8", fontSize: 11 }}
+                  domain={["dataMin - 100", "dataMax + 100"]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#0f172a",
+                    borderColor: "#334155",
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                    color: "#fff",
+                  }}
+                  formatter={(val: any) => [
+                    selectedCommodity.country === "ID"
+                      ? `Rp ${Number(val).toLocaleString("id-ID")}`
+                      : `¥ ${val}`,
+                    "Harga",
+                  ]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="price"
+                  stroke="#10b981"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#priceGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Market Insight Note */}
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2 text-xs">
+            <div className="flex items-center gap-1.5 font-bold text-emerald-300">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>Analisis Fundamental Pasar:</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed">{selectedCommodity.analysis}</p>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -2,41 +2,69 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { sendChatMessage } from "@/lib/api-client";
-import { ChatMessage } from "@/lib/types";
 import {
   Send,
+  Sparkles,
   Bot,
   User,
-  Sparkles,
-  RefreshCw,
   Copy,
   Check,
-  Leaf,
+  RotateCcw,
+  Sprout,
+  HelpCircle,
+  ShieldCheck,
+  Flame,
   Bug,
-  Droplets,
-  DollarSign,
+  ThermometerSun,
 } from "lucide-react";
 
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+}
+
 export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<Message[]>([
     {
-      id: "1",
-      sender: "assistant",
-      text: "Halo! Saya adalah **Asisten AI Agronomi AgriSensa** yang ditenagai oleh **DeepSeek AI Engine**.\n\nAda yang bisa saya bantu terkait budidaya, dosis pemupukan presisi, pengendalian hama terpadu, atau analisis kelayakan usaha tani Anda hari ini?",
+      id: "welcome",
+      role: "assistant",
+      content: `### 🌾 Halo! Saya AgriSensa AI Master Agronomist.
+Ditenagai langsung oleh **DeepSeek-V3 AI Reasoning Engine**.
+
+Saya dapat membantu Anda dalam:
+- **Formulasi Pemupukan Presisi**: Dosis Urea, NPK, SP-36, KCl, dan pupuk hayati per fase vegetatif/generatif.
+- **Diagnosa Hama & Penyakit (OPT)**: Gejala blas, wereng, ulat grayak, antraknosa, dan busuk batang.
+- **Manajemen Agroklimat & Tanah**: Koreksi pH masam, kebutuhan kapur dolomit, dan mitigasi kekeringan/banjir.
+
+*Silakan tanyakan permasalahan pertanian Anda atau pilih topik cepat di bawah!*`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      modelUsed: "DeepSeek-V3",
     },
   ]);
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const quickPrompts = [
-    { label: "Dosis NPK Jagung", icon: Droplets, text: "Berapa rekomendasi dosis pupuk NPK dan Urea per hektar untuk tanaman jagung hibrida?" },
-    { label: "Pencegahan Hama Wereng", icon: Bug, text: "Bagaimana cara pencegahan dan pengendalian terpadu hama wereng coklat pada tanaman padi?" },
-    { label: "Kapur Pertanian (Dolomit)", icon: Leaf, text: "Tanah saya memiliki pH 5.2, berapa dosis kapur dolomit yang harus saya aplikasikan sebelum tanam?" },
-    { label: "Analisis Pasar Cabai", icon: DollarSign, text: "Bagaimana tren risiko harga cabai merah keriting saat musim hujan dan strategi mitigasinya?" },
+    {
+      icon: <Sprout className="w-3.5 h-3.5 text-emerald-400" />,
+      text: "Berapa dosis pupuk NPK & Urea yang tepat untuk tanaman Jagung Hibrida 1 Hektar per fase HST?",
+    },
+    {
+      icon: <Bug className="w-3.5 h-3.5 text-rose-400" />,
+      text: "Bagaimana cara mengatasi serangan Hama Wereng Batang Coklat (WBC) pada padi sawah sebelum ambang ekonomi?",
+    },
+    {
+      icon: <ThermometerSun className="w-3.5 h-3.5 text-amber-400" />,
+      text: "Tanah saya memiliki pH 5.1. Berapa ton kapur Dolomit yang harus saya taburkan dan bagaimana teknis aplikasinya?",
+    },
+    {
+      icon: <Flame className="w-3.5 h-3.5 text-purple-400" />,
+      text: "Formulasi nutrisi AB Mix dan pencegahan penyakit patek (antraknosa) pada budidaya Cabai Rawit saat musim hujan.",
+    },
   ];
 
   const scrollToBottom = () => {
@@ -47,40 +75,40 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages, loading]);
 
-  const handleSend = async (customText?: string) => {
-    const textToSend = customText || input;
+  const handleSend = async (textToSend = input) => {
     if (!textToSend.trim() || loading) return;
 
-    const userMsg: ChatMessage = {
+    const userMsg: Message = {
       id: Date.now().toString(),
-      sender: "user",
-      text: textToSend,
+      role: "user",
+      content: textToSend,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    if (!customText) setInput("");
+    setInput("");
     setLoading(true);
 
     try {
-      const history = messages.map((m) => ({
-        role: m.sender === "user" ? "user" : "assistant",
-        content: m.text,
-      }));
-
+      const history = messages.map((m) => ({ role: m.role, content: m.content }));
       const reply = await sendChatMessage(textToSend, history);
 
-      const botMsg: ChatMessage = {
+      const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
-        sender: "assistant",
-        text: reply,
+        role: "assistant",
+        content: reply,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        modelUsed: "DeepSeek-V3",
       };
 
-      setMessages((prev) => [...prev, botMsg]);
-    } catch (err) {
-      console.error(err);
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch (err: any) {
+      const errorMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `⚠️ Maaf, terjadi gangguan jaringan: ${err.message}. Silakan coba kirim ulang.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setLoading(false);
     }
@@ -92,22 +120,68 @@ export default function ChatPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Render markdown elements simply & cleanly
+  const renderFormattedText = (content: string) => {
+    const lines = content.split("\n");
+    return lines.map((line, idx) => {
+      if (line.startsWith("### ")) {
+        return (
+          <h3 key={idx} className="text-base font-bold text-emerald-300 mt-3 mb-1 font-['Plus_Jakarta_Sans']">
+            {line.replace("### ", "")}
+          </h3>
+        );
+      }
+      if (line.startsWith("## ")) {
+        return (
+          <h2 key={idx} className="text-lg font-extrabold text-white mt-4 mb-2">
+            {line.replace("## ", "")}
+          </h2>
+        );
+      }
+      if (line.startsWith("- ") || line.startsWith("* ")) {
+        return (
+          <li key={idx} className="ml-4 list-disc text-slate-200 text-xs sm:text-sm my-0.5 leading-relaxed">
+            <span dangerouslySetInnerHTML={{ __html: formatBold(line.replace(/^[-*]\s+/, "")) }} />
+          </li>
+        );
+      }
+      if (line.trim() === "") {
+        return <div key={idx} className="h-2" />;
+      }
+      return (
+        <p
+          key={idx}
+          className="text-xs sm:text-sm text-slate-200 leading-relaxed my-1"
+          dangerouslySetInnerHTML={{ __html: formatBold(line) }}
+        />
+      );
+    });
+  };
+
+  const formatBold = (text: string) => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em class="text-emerald-300">$1</em>');
+  };
+
   return (
-    <div className="flex flex-col h-[calc(100vh-7rem)] max-w-5xl mx-auto space-y-4">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between px-4 py-3 rounded-2xl glass-panel border border-slate-800">
+    <div className="max-w-5xl mx-auto flex flex-col h-[calc(100vh-6.5rem)] space-y-4">
+      {/* Chat Top Banner */}
+      <div className="flex items-center justify-between p-4 rounded-2xl glass-panel border border-emerald-500/20 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 text-slate-950 shadow-md">
-            <Bot className="w-5 h-5" />
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20">
+            <div className="h-full w-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+              <Bot className="h-5 w-5 text-emerald-400" />
+            </div>
           </div>
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <span>AI Agronomist Chat</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                DeepSeek-V3
+            <div className="flex items-center gap-2">
+              <h1 className="font-bold text-base text-white">Asisten AI Agronomi</h1>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                DeepSeek-V3 Online
               </span>
-            </h2>
-            <p className="text-xs text-slate-400">Terhubung langsung dengan Master Orchestrator n8n di Railway</p>
+            </div>
+            <p className="text-[11px] text-slate-400">Model penalaran agronomi tropis & rekomendasi budidaya presisi</p>
           </div>
         </div>
 
@@ -115,77 +189,88 @@ export default function ChatPage() {
           onClick={() =>
             setMessages([
               {
-                id: "1",
-                sender: "assistant",
-                text: "Riwayat chat telah di-reset. Silakan tanyakan masalah pertanian atau konsultasi budidaya baru!",
+                id: "welcome",
+                role: "assistant",
+                content: "Riwayat obrolan telah dibersihkan. Silakan tanyakan masalah pertanian baru Anda!",
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                modelUsed: "DeepSeek-V3",
               },
             ])
           }
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-300 transition-colors"
+          className="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white text-xs flex items-center gap-1.5 transition-colors border border-slate-800"
           title="Reset Percakapan"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RotateCcw className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Reset Chat</span>
         </button>
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto space-y-4 p-4 rounded-2xl glass-panel border border-slate-800/80">
+      <div className="flex-1 overflow-y-auto space-y-4 p-4 rounded-3xl glass-panel border border-slate-800/80 scroll-smooth">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex items-start gap-3 ${msg.sender === "user" ? "flex-row-reverse" : "flex-row"}`}
+            className={`flex gap-3 max-w-[90%] md:max-w-[80%] ${
+              msg.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto"
+            }`}
           >
+            {/* Avatar */}
             <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs ${
-                msg.sender === "user"
-                  ? "bg-emerald-500 text-slate-950 font-bold"
-                  : "bg-slate-800 text-emerald-400 border border-emerald-500/30"
+              className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-md ${
+                msg.role === "user"
+                  ? "bg-gradient-to-tr from-cyan-600 to-blue-500 text-white"
+                  : "bg-gradient-to-tr from-emerald-600 to-teal-400 text-slate-950"
               }`}
             >
-              {msg.sender === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+              {msg.role === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
             </div>
 
+            {/* Bubble */}
             <div
-              className={`relative group max-w-[85%] md:max-w-[75%] rounded-2xl p-4 text-sm leading-relaxed ${
-                msg.sender === "user"
-                  ? "bg-emerald-600 text-white rounded-tr-none shadow-md"
-                  : "bg-slate-900/90 text-slate-200 border border-slate-800 rounded-tl-none shadow-md"
+              className={`relative p-4 rounded-2xl text-xs sm:text-sm border shadow-lg space-y-1.5 ${
+                msg.role === "user"
+                  ? "bg-gradient-to-br from-cyan-950/70 to-blue-950/70 border-cyan-500/30 text-white rounded-tr-none"
+                  : "bg-slate-900/90 border-slate-800 text-slate-200 rounded-tl-none"
               }`}
             >
-              <div className="whitespace-pre-wrap">{msg.text}</div>
-
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/10 text-[10px] text-slate-400">
-                <span>{msg.timestamp}</span>
-                {msg.modelUsed && <span className="font-mono text-emerald-400">{msg.modelUsed}</span>}
+              <div className="flex items-center justify-between gap-4 text-[10px] text-slate-400 border-b border-slate-800/60 pb-1 mb-1.5">
+                <span className="font-semibold">{msg.role === "user" ? "Anda" : "AgriSensa AI"}</span>
+                <span className="font-mono">{msg.timestamp}</span>
               </div>
 
-              {/* Copy button */}
-              <button
-                onClick={() => copyToClipboard(msg.id, msg.text)}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300"
-                title="Salin Pesan"
-              >
-                {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-              </button>
+              <div className="leading-relaxed">{renderFormattedText(msg.content)}</div>
+
+              {msg.role === "assistant" && (
+                <div className="pt-2 flex justify-end">
+                  <button
+                    onClick={() => copyToClipboard(msg.id, msg.content)}
+                    className="p-1 rounded text-slate-400 hover:text-emerald-400 transition-colors flex items-center gap-1 text-[10px]"
+                  >
+                    {copiedId === msg.id ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span className="text-emerald-400">Tersalin</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Salin</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
 
         {loading && (
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-slate-800 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
-              <Bot className="w-4 h-4" />
+          <div className="flex gap-3 max-w-[80%] mr-auto">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shrink-0 text-slate-950">
+              <Bot className="w-4 h-4 animate-pulse" />
             </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none p-4 text-xs text-slate-400 flex items-center gap-2">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce"></span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.2s]"></span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.4s]"></span>
-              </div>
-              <span>DeepSeek AI sedang memproses penalaran agronomi...</span>
+            <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 text-xs text-slate-300 rounded-tl-none flex items-center gap-2 shadow-lg">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span className="font-medium text-emerald-300">DeepSeek AI sedang memproses analisis agronomi...</span>
             </div>
           </div>
         )}
@@ -193,49 +278,48 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Prompts */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {quickPrompts.map((q) => {
-          const Icon = q.icon;
-          return (
+      {/* Quick Prompts Pills */}
+      <div className="space-y-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {quickPrompts.map((q, idx) => (
             <button
-              key={q.label}
+              key={idx}
               onClick={() => handleSend(q.text)}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-emerald-300 hover:border-emerald-500/30 transition-all shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-[11px] font-medium text-slate-300 hover:text-emerald-300 whitespace-nowrap transition-all shadow-sm shrink-0"
             >
-              <Icon className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{q.label}</span>
+              {q.icon}
+              <span className="truncate max-w-[280px]">{q.text}</span>
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
       {/* Input Box */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSend();
-        }}
-        className="flex items-center gap-2 p-2 rounded-2xl glass-panel border border-slate-700/80 focus-within:border-emerald-500/60 transition-colors"
-      >
-        <input
-          type="text"
+      <div className="relative">
+        <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Tanyakan rekomendasi budidaya, dosis pupuk, gejala hama..."
-          disabled={loading}
-          className="flex-1 bg-transparent px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          placeholder="Tanyakan masalah pemupukan, hama, pH tanah, atau dosis obat tani..."
+          rows={2}
+          className="w-full pl-4 pr-24 py-3 rounded-2xl bg-slate-900/95 border border-slate-700/80 focus:border-emerald-400 text-white text-xs sm:text-sm resize-none outline-none shadow-xl focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-slate-500"
         />
+
         <button
-          type="submit"
+          onClick={() => handleSend()}
           disabled={!input.trim() || loading}
-          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:opacity-90 disabled:opacity-40 text-slate-950 font-bold text-sm flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20"
+          className="absolute right-3 bottom-3.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:opacity-90 disabled:opacity-30 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
         >
           <span>Kirim</span>
-          <Send className="w-4 h-4" />
+          <Send className="w-3.5 h-3.5" />
         </button>
-      </form>
+      </div>
     </div>
   );
 }
