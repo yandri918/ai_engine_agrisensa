@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { sendChatMessage } from "@/lib/api-client";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Send,
   Sparkles,
@@ -11,11 +13,9 @@ import {
   Check,
   RotateCcw,
   Sprout,
-  HelpCircle,
-  ShieldCheck,
-  Flame,
   Bug,
   ThermometerSun,
+  Flame,
 } from "lucide-react";
 
 interface Message {
@@ -33,12 +33,12 @@ export default function ChatPage() {
       content: `### 🌾 Halo! Saya AgriSensa AI Master Agronomist.
 Ditenagai langsung oleh **DeepSeek-V3 AI Reasoning Engine**.
 
-Saya dapat membantu Anda dalam:
-- **Formulasi Pemupukan Presisi**: Dosis Urea, NPK, SP-36, KCl, dan pupuk hayati per fase vegetatif/generatif.
-- **Diagnosa Hama & Penyakit (OPT)**: Gejala blas, wereng, ulat grayak, antraknosa, dan busuk batang.
-- **Manajemen Agroklimat & Tanah**: Koreksi pH masam, kebutuhan kapur dolomit, dan mitigasi kekeringan/banjir.
+Saya siap memberikan panduan teknis mendalam dan solusi ilmiah untuk:
+1. **Formulasi Pemupukan Berimbang**: Dosis Urea, NPK, SP-36, KCl, dan pupuk organik per fase vegetatif/generatif.
+2. **Pengendalian Hama & Penyakit (OPT)**: Diagnosa gejala serangan, ambang kendali ekonomi, dan rekomendasi agensia hayati (*Beauveria bassiana*, *Trichoderma*).
+3. **Koreksi Kondisi Tanah**: Kebutuhan kapur dolomit per hektar berdasarkan status pH dan antisipasi cekaman iklim.
 
-*Silakan tanyakan permasalahan pertanian Anda atau pilih topik cepat di bawah!*`,
+*Silakan ketik pertanyaan Anda atau pilih topik cepat di bawah!*`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -105,7 +105,7 @@ Saya dapat membantu Anda dalam:
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `⚠️ Maaf, terjadi gangguan jaringan: ${err.message}. Silakan coba kirim ulang.`,
+        content: `⚠️ Maaf, terjadi gangguan komunikasi: ${err.message}. Silakan coba kirim ulang pertanyaan Anda.`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -118,50 +118,6 @@ Saya dapat membantu Anda dalam:
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  // Render markdown elements simply & cleanly
-  const renderFormattedText = (content: string) => {
-    const lines = content.split("\n");
-    return lines.map((line, idx) => {
-      if (line.startsWith("### ")) {
-        return (
-          <h3 key={idx} className="text-base font-bold text-emerald-300 mt-3 mb-1 font-['Plus_Jakarta_Sans']">
-            {line.replace("### ", "")}
-          </h3>
-        );
-      }
-      if (line.startsWith("## ")) {
-        return (
-          <h2 key={idx} className="text-lg font-extrabold text-white mt-4 mb-2">
-            {line.replace("## ", "")}
-          </h2>
-        );
-      }
-      if (line.startsWith("- ") || line.startsWith("* ")) {
-        return (
-          <li key={idx} className="ml-4 list-disc text-slate-200 text-xs sm:text-sm my-0.5 leading-relaxed">
-            <span dangerouslySetInnerHTML={{ __html: formatBold(line.replace(/^[-*]\s+/, "")) }} />
-          </li>
-        );
-      }
-      if (line.trim() === "") {
-        return <div key={idx} className="h-2" />;
-      }
-      return (
-        <p
-          key={idx}
-          className="text-xs sm:text-sm text-slate-200 leading-relaxed my-1"
-          dangerouslySetInnerHTML={{ __html: formatBold(line) }}
-        />
-      );
-    });
-  };
-
-  const formatBold = (text: string) => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em class="text-emerald-300">$1</em>');
   };
 
   return (
@@ -178,10 +134,10 @@ Saya dapat membantu Anda dalam:
             <div className="flex items-center gap-2">
               <h1 className="font-bold text-base text-white">Asisten AI Agronomi</h1>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                DeepSeek-V3 Online
+                DeepSeek-V3 Engine
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Model penalaran agronomi tropis & rekomendasi budidaya presisi</p>
+            <p className="text-[11px] text-slate-400">Penalaran agronomi tropis & manajemen budidaya presisi UTF-8</p>
           </div>
         </div>
 
@@ -209,7 +165,7 @@ Saya dapat membantu Anda dalam:
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-3 max-w-[90%] md:max-w-[80%] ${
+            className={`flex gap-3 max-w-[92%] md:max-w-[85%] ${
               msg.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto"
             }`}
           >
@@ -224,20 +180,51 @@ Saya dapat membantu Anda dalam:
               {msg.role === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
             </div>
 
-            {/* Bubble */}
+            {/* Message Card */}
             <div
-              className={`relative p-4 rounded-2xl text-xs sm:text-sm border shadow-lg space-y-1.5 ${
+              className={`relative p-4 rounded-2xl text-xs sm:text-sm border shadow-lg space-y-2 ${
                 msg.role === "user"
                   ? "bg-gradient-to-br from-cyan-950/70 to-blue-950/70 border-cyan-500/30 text-white rounded-tr-none"
                   : "bg-slate-900/90 border-slate-800 text-slate-200 rounded-tl-none"
               }`}
             >
               <div className="flex items-center justify-between gap-4 text-[10px] text-slate-400 border-b border-slate-800/60 pb-1 mb-1.5">
-                <span className="font-semibold">{msg.role === "user" ? "Anda" : "AgriSensa AI"}</span>
+                <span className="font-semibold">{msg.role === "user" ? "Anda" : "AgriSensa Master AI"}</span>
                 <span className="font-mono">{msg.timestamp}</span>
               </div>
 
-              <div className="leading-relaxed">{renderFormattedText(msg.content)}</div>
+              {/* Native React Markdown Renderer with UTF-8 support */}
+              <div className="prose prose-invert prose-xs max-w-none space-y-2 leading-relaxed text-slate-200">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-white mt-3 mb-1" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="text-base font-bold text-emerald-300 mt-3 mb-1" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="text-sm font-bold text-emerald-400 mt-2 mb-1" {...props} />,
+                    p: ({ node, ...props }) => <p className="my-1.5 leading-relaxed text-slate-200" {...props} />,
+                    strong: ({ node, ...props }) => <strong className="font-semibold text-white" {...props} />,
+                    em: ({ node, ...props }) => <em className="italic text-emerald-300" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="my-2 ml-4 list-disc space-y-1 text-slate-300" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="my-2 ml-4 list-decimal space-y-1 text-slate-200" {...props} />,
+                    li: ({ node, ...props }) => <li className="leading-relaxed pl-1" {...props} />,
+                    table: ({ node, ...props }) => (
+                      <div className="overflow-x-auto my-3 rounded-xl border border-slate-700">
+                        <table className="w-full text-left text-xs divide-y divide-slate-800" {...props} />
+                      </div>
+                    ),
+                    th: ({ node, ...props }) => <th className="bg-slate-800 p-2 font-bold text-emerald-300" {...props} />,
+                    td: ({ node, ...props }) => <td className="p-2 border-t border-slate-800 text-slate-300" {...props} />,
+                    code: ({ node, ...props }) => (
+                      <code className="bg-slate-950 px-1.5 py-0.5 rounded text-emerald-300 font-mono text-[11px]" {...props} />
+                    ),
+                    blockquote: ({ node, ...props }) => (
+                      <blockquote className="border-l-2 border-emerald-500 pl-3 my-2 text-slate-400 italic" {...props} />
+                    ),
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
 
               {msg.role === "assistant" && (
                 <div className="pt-2 flex justify-end">
@@ -248,12 +235,12 @@ Saya dapat membantu Anda dalam:
                     {copiedId === msg.id ? (
                       <>
                         <Check className="w-3 h-3 text-emerald-400" />
-                        <span className="text-emerald-400">Tersalin</span>
+                        <span className="text-emerald-400 font-semibold">Tersalin</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-3 h-3" />
-                        <span>Salin</span>
+                        <span>Salin Jawaban</span>
                       </>
                     )}
                   </button>
@@ -306,7 +293,7 @@ Saya dapat membantu Anda dalam:
               handleSend();
             }
           }}
-          placeholder="Tanyakan masalah pemupukan, hama, pH tanah, atau dosis obat tani..."
+          placeholder="Tanyakan masalah pemupukan, hama wereng, pH tanah, atau dosis obat tani..."
           rows={2}
           className="w-full pl-4 pr-24 py-3 rounded-2xl bg-slate-900/95 border border-slate-700/80 focus:border-emerald-400 text-white text-xs sm:text-sm resize-none outline-none shadow-xl focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-slate-500"
         />
