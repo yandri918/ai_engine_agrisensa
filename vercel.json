@@ -1,0 +1,6 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd 05_frontend_clients/agrisensa_web_app && npm run build",
+  "outputDirectory": "05_frontend_clients/agrisensa_web_app/.next",
+  "installCommand": "cd 05_frontend_clients/agrisensa_web_app && npm install"
+}
