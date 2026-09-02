@@ -45,6 +45,8 @@ import {
   Legend,
 } from "recharts";
 
+import { useLanguage } from "@/components/language-context";
+
 interface InorganicFertilizer {
   name: string;
   type: string;
@@ -61,6 +63,7 @@ interface InorganicFertilizer {
 }
 
 export default function FertilizerPage() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"combination" | "organic" | "catalog" | "recipes">("combination");
   const [loading, setLoading] = useState(false);
 
@@ -260,13 +263,13 @@ export default function FertilizerPage() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold tracking-wide uppercase">
               <FlaskConical className="w-3.5 h-3.5" />
-              Nutrient-to-Weight Solver • Subsidi & Non-Subsidi • Custom Pricing
+              {t("fert_hero_badge", "Nutrient-to-Weight Solver • Subsidi & Non-Subsidi • Custom Pricing")}
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-              Laboratorium Pupuk Majemuk & Formulasi Presisi
+              {t("fert_hero_title", "Laboratorium Pupuk Majemuk & Formulasi Presisi")}
             </h1>
             <p className="text-slate-400 text-sm max-w-2xl">
-              Kalkulator pemenuhan hara N-P-K terpadu dengan opsi pupuk majemuk (Phonska, Mutiara, Mahkota, Pelangi), komparasi harga subsidi (HET Pemerintah) vs non-subsidi komersial, fitur penyesuaian harga kios daerah, dan racikan organik.
+              {t("fert_hero_desc", "Kalkulator pemenuhan hara N-P-K terpadu dengan opsi pupuk majemuk (Phonska, Mutiara, Mahkota, Pelangi), komparasi harga subsidi (HET Pemerintah) vs non-subsidi komersial, fitur penyesuaian harga kios daerah, dan racikan organik.")}
             </p>
           </div>
 
@@ -281,7 +284,7 @@ export default function FertilizerPage() {
               }`}
             >
               <Scale className="w-3.5 h-3.5" />
-              <span>Pupuk Majemuk & Kombinasi</span>
+              <span>{t("fert_tab_combination", "Pupuk Majemuk & Kombinasi")}</span>
             </button>
             <button
               onClick={() => setActiveTab("catalog")}
@@ -292,7 +295,7 @@ export default function FertilizerPage() {
               }`}
             >
               <Tag className="w-3.5 h-3.5" />
-              <span>Katalog & Harga Pupuk</span>
+              <span>{t("fert_tab_catalog", "Katalog & Harga Pupuk")}</span>
             </button>
             <button
               onClick={() => setActiveTab("organic")}
@@ -303,7 +306,7 @@ export default function FertilizerPage() {
               }`}
             >
               <Leaf className="w-3.5 h-3.5" />
-              <span>Kalkulator Organik</span>
+              <span>{t("fert_tab_organic", "Kalkulator Organik")}</span>
             </button>
             <button
               onClick={() => setActiveTab("recipes")}
@@ -314,7 +317,7 @@ export default function FertilizerPage() {
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span>SOP Resep POC</span>
+              <span>{t("fert_tab_recipes", "SOP Resep POC")}</span>
             </button>
           </div>
         </div>

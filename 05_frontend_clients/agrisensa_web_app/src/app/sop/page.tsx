@@ -25,6 +25,8 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { useLanguage } from "@/components/language-context";
+
 interface SOPCommodity {
   name: string;
   scientific_name: string;
@@ -58,7 +60,10 @@ interface FertilizerPlan {
 interface PHTRecipe {
   target_pest: string;
   botanical_formula: string;
-  application: string;
+  ingredients?: string;
+  application_method?: string;
+  application?: string;
+  efficacy_notes?: string;
 }
 
 interface ScientificJournalCitation {
@@ -92,6 +97,7 @@ interface SOPResultData {
 }
 
 export default function SOPGeneratorPage() {
+  const { t } = useLanguage();
   const [commodities, setCommodities] = useState<SOPCommodity[]>([]);
   const [selectedCommodity, setSelectedCommodity] = useState<string>("Cabai Merah");
   const [luasHa, setLuasHa] = useState<number>(1.0);
@@ -168,13 +174,13 @@ export default function SOPGeneratorPage() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold tracking-wide uppercase">
               <Sparkles className="w-3.5 h-3.5" />
-              AgriSensa Precision SOP Generator • AI & Scientific Citations
+              {t("sop_hero_badge", "AgriSensa Precision SOP Generator • AI & Scientific Citations")}
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-              Generator SOP Budidaya Presisi
+              {t("sop_hero_title", "Generator SOP Budidaya Presisi")}
             </h1>
             <p className="text-slate-400 text-sm max-w-2xl">
-              Penyusunan Standard Operating Procedure (SOP) budidaya per komoditas berbasis logika agronomi baku AgriSensa, modul Pestisida Nabati M-48, sintesis AI Agent adaptif, dan rujukan sitasi jurnal ilmiah peer-reviewed (BRIN, IPB, FAO, Springer).
+              {t("sop_hero_desc", "Penyusunan Standard Operating Procedure (SOP) budidaya per komoditas berbasis logika agronomi baku AgriSensa, modul Pestisida Nabati M-48, sintesis AI Agent adaptif, dan rujukan sitasi jurnal ilmiah peer-reviewed (BRIN, IPB, FAO, Springer).")}
             </p>
           </div>
 
