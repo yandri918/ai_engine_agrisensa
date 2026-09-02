@@ -822,6 +822,9 @@ class CombinationCalculatorRequest(BaseModel):
     target_k_kg: float = Field(60.0, example=60.0)
     land_area_ha: float = Field(1.0, example=1.0)
     buffer_pct: float = Field(5.0, example=5.0)
+    price_mode: Optional[str] = Field("subsidi", description="subsidi, nonsubsidi, atau custom")
+    custom_prices: Optional[Dict[str, float]] = Field(default_factory=dict, description="Penyesuaian harga kustom per kg")
+    compound_choice: Optional[str] = Field("NPK Phonska Subsidi (15-10-12)", description="Pilihan pupuk majemuk utama")
 
 @app.post("/fertilizer/organic-calculator", summary="Hitung Formulasi NPK Pupuk Organik", tags=["Fertilizer Engine"])
 async def calculate_organic_fertilizer(req: OrganicCalculatorRequest):
@@ -847,7 +850,7 @@ async def calculate_fertilizer_combination(req: CombinationCalculatorRequest):
     """
     Nutrient-to-Weight Blending Solver:
     Menghitung rekomendasi 3 skenario pemenuhan hara (Pupuk Tunggal, NPK Majemuk, dan Hybrid Organik-Kimia),
-    lengkap dengan estimasi biaya, jumlah karung 50kg, dan keunggulan agronomi.
+    lengkap dengan komparasi biaya subsidi HET vs non-subsidi komersial vs kustom, jumlah karung 50kg, dan keunggulan agronomi.
     """
     try:
         engine: FertilizerEngine = get_engine("fertilizer")
@@ -856,12 +859,21 @@ async def calculate_fertilizer_combination(req: CombinationCalculatorRequest):
             target_p_kg=req.target_p_kg,
             target_k_kg=req.target_k_kg,
             land_area_ha=req.land_area_ha,
-            buffer_pct=req.buffer_pct
+            buffer_pct=req.buffer_pct,
+            price_mode=req.price_mode or "subsidi",
+            custom_prices=req.custom_prices,
+            compound_choice=req.compound_choice or "NPK Phonska Subsidi (15-10-12)",
         )
         return res
     except Exception as e:
         logger.error(f"Combination fertilizer calculator error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/fertilizer/inorganic-catalog", summary="Daftar Katalog Pupuk Tunggal & Majemuk (Subsidi & Non-Subsidi)", tags=["Fertilizer Engine"])
+async def get_inorganic_catalog():
+    """Mengambil katalog lengkap pupuk tunggal dan majemuk bersubsidi HET dan non-subsidi komersial beserta harga default."""
+    engine: FertilizerEngine = get_engine("fertilizer")
+    return {"success": True, "fertilizers": engine.get_inorganic_catalog()}
 
 @app.get("/fertilizer/recipes", summary="Daftar SOP & Resep Pupuk Organik Premium", tags=["Fertilizer Engine"])
 async def get_fertilizer_recipes():

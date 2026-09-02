@@ -50,10 +50,12 @@ export async function GET(req: NextRequest) {
     const endpoint =
       type === "materials"
         ? `${aiEngineUrl}/fertilizer/materials`
+        : type === "inorganic"
+        ? `${aiEngineUrl}/fertilizer/inorganic-catalog`
         : `${aiEngineUrl}/fertilizer/recipes`;
 
     const res = await fetch(endpoint, {
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(6000),
     });
 
     if (res.ok) {

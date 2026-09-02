@@ -100,19 +100,148 @@ ORGANIC_MATERIALS_DB: Dict[str, Dict[str, Any]] = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. Chemical / Inorganic Fertilizer Database
+# 2. Chemical / Inorganic & Compound Fertilizer Database (Subsidi & Non-Subsidi)
 # ─────────────────────────────────────────────────────────────────────────────
 
 INORGANIC_FERTILIZERS_DB: Dict[str, Dict[str, Any]] = {
-    "Urea": {"N": 46.0, "P": 0.0, "K": 0.0, "price_per_kg": 2500, "density": 0.75, "color": "#3b82f6"},
-    "SP-36": {"N": 0.0, "P": 36.0, "K": 0.0, "price_per_kg": 3000, "density": 1.1, "color": "#10b981"},
-    "KCl / MOP 60": {"N": 0.0, "P": 0.0, "K": 60.0, "price_per_kg": 3500, "density": 1.0, "color": "#f59e0b"},
-    "ZA (Amonium Sulfat)": {"N": 21.0, "P": 0.0, "K": 0.0, "S": 24.0, "price_per_kg": 2200, "density": 0.9, "color": "#06b6d4"},
-    "NPK 15-15-15": {"N": 15.0, "P": 15.0, "K": 15.0, "price_per_kg": 4000, "density": 1.0, "color": "#8b5cf6"},
-    "NPK 16-16-16 (Mutiara)": {"N": 16.0, "P": 16.0, "K": 16.0, "price_per_kg": 4200, "density": 1.0, "color": "#ec4899"},
-    "KNO3 Putih (Kalium Nitrat)": {"N": 13.0, "P": 0.0, "K": 45.0, "price_per_kg": 18000, "density": 1.1, "color": "#6366f1"},
-    "MKP (Mono Kalium Fosfat)": {"N": 0.0, "P": 52.0, "K": 34.0, "price_per_kg": 22000, "density": 1.0, "color": "#14b8a6"},
-    "Kompos Matang (Organik)": {"N": 1.5, "P": 1.0, "K": 1.5, "price_per_kg": 1200, "density": 0.55, "color": "#84cc16"},
+    # Pupuk Subsidi (HET Pemerintah 2024-2026)
+    "Urea Subsidi": {
+        "N": 46.0, "P": 0.0, "K": 0.0,
+        "is_subsidi": True,
+        "subsidi_price_per_kg": 2250,
+        "nonsubsidi_price_per_kg": 8500,
+        "type": "Tunggal",
+        "desc": "Sumber Nitrogen utama berkecepatan serap tinggi untuk daun & anakan.",
+        "color": "#3b82f6",
+    },
+    "NPK Phonska Subsidi (15-10-12)": {
+        "N": 15.0, "P": 10.0, "K": 12.0,
+        "is_subsidi": True,
+        "subsidi_price_per_kg": 2300,
+        "nonsubsidi_price_per_kg": 11500,
+        "type": "Majemuk",
+        "desc": "Pupuk majemuk bersubsidi standar tanaman pangan (Padi, Jagung, Kedelai).",
+        "color": "#8b5cf6",
+    },
+    "NPK Formula Khusus / Kakao Subsidi (14-12-16+4Mg)": {
+        "N": 14.0, "P": 12.0, "K": 16.0, "Mg": 4.0,
+        "is_subsidi": True,
+        "subsidi_price_per_kg": 3300,
+        "nonsubsidi_price_per_kg": 13500,
+        "type": "Majemuk",
+        "desc": "Pupuk majemuk subsidi khusus perkebunan (Kakao, Kopi, Tebu).",
+        "color": "#ec4899",
+    },
+    "Petroganik / Organik Subsidi": {
+        "N": 1.5, "P": 1.0, "K": 1.5,
+        "is_subsidi": True,
+        "subsidi_price_per_kg": 800,
+        "nonsubsidi_price_per_kg": 1500,
+        "type": "Organik Padat",
+        "desc": "Pupuk organik padat granul bersubsidi pembenah tanah & C-organik.",
+        "color": "#84cc16",
+    },
+
+    # Pupuk Non-Subsidi / Komersial
+    "NPK Mutiara 16-16-16 (Komersial)": {
+        "N": 16.0, "P": 16.0, "K": 16.0,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 2300,
+        "nonsubsidi_price_per_kg": 15500,
+        "type": "Majemuk",
+        "desc": "Pupuk majemuk premium Eropa (Yara/Meroke), kelarutan 100%, cepat serap.",
+        "color": "#ec4899",
+    },
+    "NPK Phonska Plus 15-15-15+Zn": {
+        "N": 15.0, "P": 15.0, "K": 15.0, "Zn": 0.2,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 2300,
+        "nonsubsidi_price_per_kg": 13000,
+        "type": "Majemuk",
+        "desc": "Pupuk majemuk non-subsidi Petrokimia dengan Zink untuk daya tahan penyakit.",
+        "color": "#a855f7",
+    },
+    "NPK Mahkota 13-6-27 (Buah/Sawit)": {
+        "N": 13.0, "P": 6.0, "K": 27.0, "B": 0.5,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 2500,
+        "nonsubsidi_price_per_kg": 14500,
+        "type": "Majemuk",
+        "desc": "Formula tinggi Kalium untuk pengisian bobot buah, umbi, dan tandan sawit.",
+        "color": "#f97316",
+    },
+    "NPK Pelangi 20-10-10 (Vegetatif)": {
+        "N": 20.0, "P": 10.0, "K": 10.0,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 2300,
+        "nonsubsidi_price_per_kg": 12500,
+        "type": "Majemuk",
+        "desc": "Formula tinggi Nitrogen untuk fase pertumbuhan awal dan sayuran daun.",
+        "color": "#06b6d4",
+    },
+    "Urea Non-Subsidi (Petro/Pusri)": {
+        "N": 46.0, "P": 0.0, "K": 0.0,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 2250,
+        "nonsubsidi_price_per_kg": 8500,
+        "type": "Tunggal",
+        "desc": "Urea prill/granul non-subsidi bebas batasan kuota RDKK.",
+        "color": "#3b82f6",
+    },
+    "SP-36 Non-Subsidi (Super Fosfat)": {
+        "N": 0.0, "P": 36.0, "K": 0.0, "S": 5.0,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 2000,
+        "nonsubsidi_price_per_kg": 9500,
+        "type": "Tunggal",
+        "desc": "Sumber Fosfat murni untuk memicu perakaran awal dan pembungaan.",
+        "color": "#10b981",
+    },
+    "KCl / MOP 60 (Kanada/Rusia)": {
+        "N": 0.0, "P": 0.0, "K": 60.0,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 2500,
+        "nonsubsidi_price_per_kg": 12000,
+        "type": "Tunggal",
+        "desc": "Sumber Kalium terkonsentrasi tinggi untuk pengisian pati dan ketahanan rebah.",
+        "color": "#f59e0b",
+    },
+    "ZA Non-Subsidi (Amonium Sulfat)": {
+        "N": 21.0, "P": 0.0, "K": 0.0, "S": 24.0,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 1800,
+        "nonsubsidi_price_per_kg": 5500,
+        "type": "Tunggal",
+        "desc": "Sumber N dan Sulfur (S) esensial untuk aroma, rasa pedas/tajam (bawang/cabai).",
+        "color": "#14b8a6",
+    },
+    "MKP (Mono Kalium Fosfat)": {
+        "N": 0.0, "P": 52.0, "K": 34.0,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 35000,
+        "nonsubsidi_price_per_kg": 45000,
+        "type": "Khusus / Foliar",
+        "desc": "Fosfat dan Kalium larut air 100% untuk fase booster bunga dan buah.",
+        "color": "#0ea5e9",
+    },
+    "KNO3 Putih (Kalium Nitrat)": {
+        "N": 13.0, "P": 0.0, "K": 45.0,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 30000,
+        "nonsubsidi_price_per_kg": 40000,
+        "type": "Khusus / Foliar",
+        "desc": "Nitrat bebas klorin untuk mencegah kerontokan buah dan pengisian rasa manis.",
+        "color": "#6366f1",
+    },
+    "Kompos Matang / Bokashi Lokal": {
+        "N": 1.5, "P": 1.0, "K": 1.5,
+        "is_subsidi": False,
+        "subsidi_price_per_kg": 800,
+        "nonsubsidi_price_per_kg": 1500,
+        "type": "Organik Padat",
+        "desc": "Kompos organik lokal hasil fermentasi kohe + bioaktivator rumen.",
+        "color": "#84cc16",
+    },
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -336,6 +465,26 @@ class FertilizerEngine:
             "details": details,
         }
 
+    def get_inorganic_catalog(self) -> List[Dict[str, Any]]:
+        """Daftar katalog pupuk tunggal dan majemuk lengkap dengan harga subsidi HET & non-subsidi komersial."""
+        catalog = []
+        for name, spec in self.inorganic_db.items():
+            catalog.append({
+                "name": name,
+                "type": spec.get("type", "Tunggal"),
+                "n_pct": spec.get("N", 0.0),
+                "p_pct": spec.get("P", 0.0),
+                "k_pct": spec.get("K", 0.0),
+                "s_pct": spec.get("S", 0.0),
+                "mg_pct": spec.get("Mg", 0.0),
+                "is_subsidi": spec.get("is_subsidi", False),
+                "subsidi_price_per_kg": spec.get("subsidi_price_per_kg", 2500),
+                "nonsubsidi_price_per_kg": spec.get("nonsubsidi_price_per_kg", 12000),
+                "desc": spec.get("desc", ""),
+                "color": spec.get("color", "#10b981"),
+            })
+        return catalog
+
     def calculate_combination_blending(
         self,
         target_n_kg: float,
@@ -343,62 +492,141 @@ class FertilizerEngine:
         target_k_kg: float,
         land_area_ha: float = 1.0,
         buffer_pct: float = 5.0,
+        price_mode: str = "subsidi",  # 'subsidi', 'nonsubsidi', 'custom'
+        custom_prices: Optional[Dict[str, float]] = None,
+        compound_choice: str = "NPK Phonska Subsidi (15-10-12)",
     ) -> Dict[str, Any]:
         """
-        Menghitung perbandingan kebutuhan pupuk tunggal vs majemuk vs kombinasi organik-kimia.
+        Menghitung perbandingan kebutuhan pupuk tunggal vs majemuk vs kombinasi hybrid
+        dengan dukungan skema harga subsidi (HET), non-subsidi komersial, dan kustom harga daerah.
         """
         mult = land_area_ha * (1.0 + buffer_pct / 100.0)
         req_n = target_n_kg * mult
         req_p = target_p_kg * mult
         req_k = target_k_kg * mult
 
-        # 1. Opsi A: Pupuk Tunggal Standar (Urea + SP-36 + KCl)
+        custom_prices = custom_prices or {}
+
+        def get_price(fertilizer_name: str) -> float:
+            if fertilizer_name in custom_prices and custom_prices[fertilizer_name] > 0:
+                return float(custom_prices[fertilizer_name])
+            spec = self.inorganic_db.get(fertilizer_name, {})
+            if price_mode == "subsidi":
+                return float(spec.get("subsidi_price_per_kg", 2500))
+            return float(spec.get("nonsubsidi_price_per_kg", 12000))
+
+        # Helper price retriever for specific mode
+        def get_mode_price(fertilizer_name: str, mode: str) -> float:
+            spec = self.inorganic_db.get(fertilizer_name, {})
+            if mode == "subsidi":
+                return float(spec.get("subsidi_price_per_kg", 2500))
+            return float(spec.get("nonsubsidi_price_per_kg", 12000))
+
+        # ── 1. OPSI A: Pupuk Tunggal Standar (Urea + SP-36 + KCl) ──
+        urea_name = "Urea Subsidi" if price_mode == "subsidi" else "Urea Non-Subsidi (Petro/Pusri)"
+        sp36_name = "SP-36 Non-Subsidi (Super Fosfat)"
+        kcl_name = "KCl / MOP 60 (Kanada/Rusia)"
+
         urea_kg = round(req_n / 0.46, 1)
         sp36_kg = round(req_p / 0.36, 1)
         kcl_kg = round(req_k / 0.60, 1)
-        cost_single = (
-            urea_kg * self.inorganic_db["Urea"]["price_per_kg"] +
-            sp36_kg * self.inorganic_db["SP-36"]["price_per_kg"] +
-            kcl_kg * self.inorganic_db["KCl / MOP 60"]["price_per_kg"]
+
+        cost_single_active = (
+            urea_kg * get_price(urea_name) +
+            sp36_kg * get_price(sp36_name) +
+            kcl_kg * get_price(kcl_name)
+        )
+        cost_single_subsidi = (
+            urea_kg * get_mode_price(urea_name, "subsidi") +
+            sp36_kg * get_mode_price(sp36_name, "subsidi") +
+            kcl_kg * get_mode_price(kcl_name, "subsidi")
+        )
+        cost_single_nonsubsidi = (
+            urea_kg * get_mode_price(urea_name, "nonsubsidi") +
+            sp36_kg * get_mode_price(sp36_name, "nonsubsidi") +
+            kcl_kg * get_mode_price(kcl_name, "nonsubsidi")
         )
 
-        # 2. Opsi B: Pupuk Majemuk NPK 16-16-16 + Tambahan Tunggal
-        # Penuhi P dengan NPK 16-16-16 dulu
-        npk_weight = round(req_p / 0.16, 1)
-        n_from_npk = npk_weight * 0.16
-        k_from_npk = npk_weight * 0.16
+        # ── 2. OPSI B: Pupuk Majemuk Pilihan (Phonska / Mutiara / Mahkota) + Penyeimbang ──
+        compound_spec = self.inorganic_db.get(compound_choice, self.inorganic_db["NPK Phonska Subsidi (15-10-12)"])
+        cp_n_pct = compound_spec.get("N", 15.0) / 100.0
+        cp_p_pct = compound_spec.get("P", 15.0) / 100.0
+        cp_k_pct = compound_spec.get("K", 15.0) / 100.0
 
-        extra_n_needed = max(0.0, req_n - n_from_npk)
-        extra_k_needed = max(0.0, req_k - k_from_npk)
+        # Penuhi kebutuhan P utama menggunakan pupuk majemuk
+        if cp_p_pct > 0:
+            compound_weight = round(req_p / cp_p_pct, 1)
+        else:
+            compound_weight = round(req_n / cp_n_pct, 1)
+
+        n_from_compound = compound_weight * cp_n_pct
+        p_from_compound = compound_weight * cp_p_pct
+        k_from_compound = compound_weight * cp_k_pct
+
+        extra_n_needed = max(0.0, req_n - n_from_compound)
+        extra_k_needed = max(0.0, req_k - k_from_compound)
 
         extra_urea = round(extra_n_needed / 0.46, 1)
         extra_kcl = round(extra_k_needed / 0.60, 1)
 
-        cost_compound = (
-            npk_weight * self.inorganic_db["NPK 16-16-16 (Mutiara)"]["price_per_kg"] +
-            extra_urea * self.inorganic_db["Urea"]["price_per_kg"] +
-            extra_kcl * self.inorganic_db["KCl / MOP 60"]["price_per_kg"]
+        cost_compound_active = (
+            compound_weight * get_price(compound_choice) +
+            extra_urea * get_price(urea_name) +
+            extra_kcl * get_price(kcl_name)
+        )
+        cost_compound_subsidi = (
+            compound_weight * get_mode_price(compound_choice, "subsidi") +
+            extra_urea * get_mode_price(urea_name, "subsidi") +
+            extra_kcl * get_mode_price(kcl_name, "subsidi")
+        )
+        cost_compound_nonsubsidi = (
+            compound_weight * get_mode_price(compound_choice, "nonsubsidi") +
+            extra_urea * get_mode_price(urea_name, "nonsubsidi") +
+            extra_kcl * get_mode_price(kcl_name, "nonsubsidi")
         )
 
-        # 3. Opsi C: Pupuk Kombinasi Terpadu (50% Organik Kompos Matang + 50% Anorganik)
-        kompos_kg = round((req_n * 0.5) / 0.015, 1) # 1.5% N
-        n_from_kompos = kompos_kg * 0.015
-        p_from_kompos = kompos_kg * 0.010
-        k_from_kompos = kompos_kg * 0.015
+        # ── 3. OPSI C: Formulasi Hybrid Berimbang (50% Organik + 50% Majemuk) ──
+        organik_name = "Petroganik / Organik Subsidi" if price_mode == "subsidi" else "Kompos Matang / Bokashi Lokal"
+        organik_kg = round((req_n * 0.5) / 0.015, 1) # 1.5% N
+        n_from_organik = organik_kg * 0.015
+        p_from_organik = organik_kg * 0.010
+        k_from_organik = organik_kg * 0.015
 
-        sub_n_needed = max(0.0, req_n - n_from_kompos)
-        sub_p_needed = max(0.0, req_p - p_from_kompos)
-        sub_k_needed = max(0.0, req_k - k_from_kompos)
+        rem_n = max(0.0, req_n - n_from_organik)
+        rem_p = max(0.0, req_p - p_from_organik)
+        rem_k = max(0.0, req_k - k_from_organik)
 
-        sub_urea = round(sub_n_needed / 0.46, 1)
-        sub_sp36 = round(sub_p_needed / 0.36, 1)
-        sub_kcl = round(sub_k_needed / 0.60, 1)
+        if cp_p_pct > 0:
+            hybrid_compound_kg = round(rem_p / cp_p_pct, 1)
+        else:
+            hybrid_compound_kg = round(rem_n / cp_n_pct, 1)
 
-        cost_hybrid = (
-            kompos_kg * self.inorganic_db["Kompos Matang (Organik)"]["price_per_kg"] +
-            sub_urea * self.inorganic_db["Urea"]["price_per_kg"] +
-            sub_sp36 * self.inorganic_db["SP-36"]["price_per_kg"] +
-            sub_kcl * self.inorganic_db["KCl / MOP 60"]["price_per_kg"]
+        n_from_hy_cp = hybrid_compound_kg * cp_n_pct
+        k_from_hy_cp = hybrid_compound_kg * cp_k_pct
+
+        hy_extra_n = max(0.0, rem_n - n_from_hy_cp)
+        hy_extra_k = max(0.0, rem_k - k_from_hy_cp)
+
+        hy_urea = round(hy_extra_n / 0.46, 1)
+        hy_kcl = round(hy_extra_k / 0.60, 1)
+
+        cost_hybrid_active = (
+            organik_kg * get_price(organik_name) +
+            hybrid_compound_kg * get_price(compound_choice) +
+            hy_urea * get_price(urea_name) +
+            hy_kcl * get_price(kcl_name)
+        )
+        cost_hybrid_subsidi = (
+            organik_kg * get_mode_price(organik_name, "subsidi") +
+            hybrid_compound_kg * get_mode_price(compound_choice, "subsidi") +
+            hy_urea * get_mode_price(urea_name, "subsidi") +
+            hy_kcl * get_mode_price(kcl_name, "subsidi")
+        )
+        cost_hybrid_nonsubsidi = (
+            organik_kg * get_mode_price(organik_name, "nonsubsidi") +
+            hybrid_compound_kg * get_mode_price(compound_choice, "nonsubsidi") +
+            hy_urea * get_mode_price(urea_name, "nonsubsidi") +
+            hy_kcl * get_mode_price(kcl_name, "nonsubsidi")
         )
 
         return {
@@ -409,41 +637,112 @@ class FertilizerEngine:
                 "k_kg": round(req_k, 1),
                 "land_area_ha": land_area_ha,
                 "buffer_pct": buffer_pct,
+                "price_mode": price_mode,
+                "compound_choice": compound_choice,
             },
             "options": [
                 {
-                    "name": "Opsi 1: Pupuk Tunggal Berimbang (Urea + SP-36 + KCl)",
-                    "category": "Anorganik Murni",
-                    "total_cost_rp": round(cost_single),
+                    "name": f"Opsi 1: Pupuk Majemuk {compound_choice} + Penyeimbang",
+                    "category": "Majemuk Presisi & Cepat Serap",
+                    "total_cost_rp": round(cost_compound_active),
+                    "cost_subsidi_rp": round(cost_compound_subsidi),
+                    "cost_nonsubsidi_rp": round(cost_compound_nonsubsidi),
+                    "savings_subsidi_rp": max(0, round(cost_compound_nonsubsidi - cost_compound_subsidi)),
                     "items": [
-                        {"fertilizer": "Urea (46% N)", "weight_kg": urea_kg, "sacks_50kg": round(urea_kg / 50, 1), "cost_rp": round(urea_kg * 2500)},
-                        {"fertilizer": "SP-36 (36% P)", "weight_kg": sp36_kg, "sacks_50kg": round(sp36_kg / 50, 1), "cost_rp": round(sp36_kg * 3000)},
-                        {"fertilizer": "KCl 60 (60% K)", "weight_kg": kcl_kg, "sacks_50kg": round(kcl_kg / 50, 1), "cost_rp": round(kcl_kg * 3500)},
+                        {
+                            "fertilizer": compound_choice,
+                            "weight_kg": compound_weight,
+                            "sacks_50kg": round(compound_weight / 50, 1),
+                            "price_per_kg": get_price(compound_choice),
+                            "cost_rp": round(compound_weight * get_price(compound_choice)),
+                        },
+                        {
+                            "fertilizer": f"{urea_name} (Penyeimbang N)",
+                            "weight_kg": extra_urea,
+                            "sacks_50kg": round(extra_urea / 50, 1),
+                            "price_per_kg": get_price(urea_name),
+                            "cost_rp": round(extra_urea * get_price(urea_name)),
+                        },
+                        {
+                            "fertilizer": f"{kcl_name} (Penyeimbang K)",
+                            "weight_kg": extra_kcl,
+                            "sacks_50kg": round(extra_kcl / 50, 1),
+                            "price_per_kg": get_price(kcl_name),
+                            "cost_rp": round(extra_kcl * get_price(kcl_name)),
+                        },
                     ],
-                    "pros": "Fleksibel mengatur rasio hara spesifik tiap fase tanam.",
+                    "pros": "Aplikasi tabur seragam, hara majemuk N-P-K langsung tersedia dalam satu butir granul.",
                 },
                 {
-                    "name": "Opsi 2: Pupuk Majemuk NPK 16-16-16 + Suplemen",
-                    "category": "Majemuk Efisien",
-                    "total_cost_rp": round(cost_compound),
+                    "name": "Opsi 2: Pupuk Tunggal Standar (Urea + SP-36 + KCl)",
+                    "category": "Tunggal Terpisah (Custom Ratio)",
+                    "total_cost_rp": round(cost_single_active),
+                    "cost_subsidi_rp": round(cost_single_subsidi),
+                    "cost_nonsubsidi_rp": round(cost_single_nonsubsidi),
+                    "savings_subsidi_rp": max(0, round(cost_single_nonsubsidi - cost_single_subsidi)),
                     "items": [
-                        {"fertilizer": "NPK Mutiara 16-16-16", "weight_kg": npk_weight, "sacks_50kg": round(npk_weight / 50, 1), "cost_rp": round(npk_weight * 4200)},
-                        {"fertilizer": "Urea (Penyeimbang N)", "weight_kg": extra_urea, "sacks_50kg": round(extra_urea / 50, 1), "cost_rp": round(extra_urea * 2500)},
-                        {"fertilizer": "KCl 60 (Penyeimbang K)", "weight_kg": extra_kcl, "sacks_50kg": round(extra_kcl / 50, 1), "cost_rp": round(extra_kcl * 3500)},
+                        {
+                            "fertilizer": urea_name,
+                            "weight_kg": urea_kg,
+                            "sacks_50kg": round(urea_kg / 50, 1),
+                            "price_per_kg": get_price(urea_name),
+                            "cost_rp": round(urea_kg * get_price(urea_name)),
+                        },
+                        {
+                            "fertilizer": sp36_name,
+                            "weight_kg": sp36_kg,
+                            "sacks_50kg": round(sp36_kg / 50, 1),
+                            "price_per_kg": get_price(sp36_name),
+                            "cost_rp": round(sp36_kg * get_price(sp36_name)),
+                        },
+                        {
+                            "fertilizer": kcl_name,
+                            "weight_kg": kcl_kg,
+                            "sacks_50kg": round(kcl_kg / 50, 1),
+                            "price_per_kg": get_price(kcl_name),
+                            "cost_rp": round(kcl_kg * get_price(kcl_name)),
+                        },
                     ],
-                    "pros": "Praktis saat aplikasi tabur dan larut cepat.",
+                    "pros": "Sangat fleksibel mengatur waktu aplikasi (misal P saat tanam, N fase vegetatif, K fase generatif).",
                 },
                 {
-                    "name": "Opsi 3: Formulasi Kombinasi Hybrid (50% Kompos + 50% Kimia)",
-                    "category": "Hybrid Ramah Lingkungan & ESG",
-                    "total_cost_rp": round(cost_hybrid),
+                    "name": f"Opsi 3: Formulasi Hybrid Berimbang (50% Organik + 50% Majemuk {compound_choice})",
+                    "category": "Hybrid Ramah Lingkungan & Kesuburan Tanah",
+                    "total_cost_rp": round(cost_hybrid_active),
+                    "cost_subsidi_rp": round(cost_hybrid_subsidi),
+                    "cost_nonsubsidi_rp": round(cost_hybrid_nonsubsidi),
+                    "savings_subsidi_rp": max(0, round(cost_hybrid_nonsubsidi - cost_hybrid_subsidi)),
                     "items": [
-                        {"fertilizer": "Kompos Organik Matang", "weight_kg": kompos_kg, "sacks_50kg": round(kompos_kg / 50, 1), "cost_rp": round(kompos_kg * 1200)},
-                        {"fertilizer": "Urea (46% N)", "weight_kg": sub_urea, "sacks_50kg": round(sub_urea / 50, 1), "cost_rp": round(sub_urea * 2500)},
-                        {"fertilizer": "SP-36 (36% P)", "weight_kg": sub_sp36, "sacks_50kg": round(sub_sp36 / 50, 1), "cost_rp": round(sub_sp36 * 3000)},
-                        {"fertilizer": "KCl 60 (60% K)", "weight_kg": sub_kcl, "sacks_50kg": round(sub_kcl / 50, 1), "cost_rp": round(sub_kcl * 3500)},
+                        {
+                            "fertilizer": organik_name,
+                            "weight_kg": organik_kg,
+                            "sacks_50kg": round(organik_kg / 40, 1), # karung organik 40kg
+                            "price_per_kg": get_price(organik_name),
+                            "cost_rp": round(organik_kg * get_price(organik_name)),
+                        },
+                        {
+                            "fertilizer": compound_choice,
+                            "weight_kg": hybrid_compound_kg,
+                            "sacks_50kg": round(hybrid_compound_kg / 50, 1),
+                            "price_per_kg": get_price(compound_choice),
+                            "cost_rp": round(hybrid_compound_kg * get_price(compound_choice)),
+                        },
+                        {
+                            "fertilizer": f"{urea_name} (Penyeimbang N)",
+                            "weight_kg": hy_urea,
+                            "sacks_50kg": round(hy_urea / 50, 1),
+                            "price_per_kg": get_price(urea_name),
+                            "cost_rp": round(hy_urea * get_price(urea_name)),
+                        },
+                        {
+                            "fertilizer": f"{kcl_name} (Penyeimbang K)",
+                            "weight_kg": hy_kcl,
+                            "sacks_50kg": round(hy_kcl / 50, 1),
+                            "price_per_kg": get_price(kcl_name),
+                            "cost_rp": round(hy_kcl * get_price(kcl_name)),
+                        },
                     ],
-                    "pros": "Meningkatkan retensi air tanah, menekan emisi karbon, dan menjaga kesuburan tanah jangka panjang.",
+                    "pros": "Meningkatkan daya ikat air tanah, mencegah pencucian hara (leaching), dan menjaga biomassa mikroba.",
                 },
             ],
         }
@@ -454,4 +753,6 @@ class FertilizerEngine:
 
     def get_raw_materials(self) -> Dict[str, Any]:
         """Mengembalikan daftar database bahan baku organik ilmiah."""
+        return self.organic_db
+
         return self.organic_db
