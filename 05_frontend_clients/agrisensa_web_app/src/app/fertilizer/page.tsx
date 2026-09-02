@@ -46,6 +46,7 @@ import {
 } from "recharts";
 
 import { useLanguage } from "@/components/language-context";
+import { SendTelegramButton } from "@/components/send-telegram-button";
 
 interface InorganicFertilizer {
   name: string;
@@ -528,8 +529,35 @@ export default function FertilizerPage() {
 
           {/* 3 SCENARIO COMPARISON CARDS */}
           {combinationResult?.options && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {combinationResult.options.map((opt: any, oIdx: number) => (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#090e18] p-4 rounded-2xl border border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Award className="w-4 h-4 text-emerald-400" />
+                    Hasil Komparasi 3 Opsi Formulasi Pupuk
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Kebutuhan hara: N {targetN} kg • P {targetP} kg • K {targetK} kg (Luas: {landAreaHa} Ha)
+                  </p>
+                </div>
+                <SendTelegramButton
+                  message={`🧪 *AGRISENSA FERTILIZER BLENDING REPORT* 🌾\n\n` +
+                    `📌 *Kebutuhan Hara:* N: ${targetN} kg | P: ${targetP} kg | K: ${targetK} kg\n` +
+                    `📐 *Luas Lahan:* ${landAreaHa} Ha | *Skema Harga:* ${priceMode.toUpperCase()}\n\n` +
+                    (combinationResult.options || []).map((opt: any, idx: number) => 
+                      `⭐ *OPSI ${idx + 1}: ${opt.name}*\n` +
+                      `• *Total Biaya:* Rp ${opt.total_cost_rp?.toLocaleString('id-ID')}\n` +
+                      `• *Total Pupuk:* ${opt.total_kg} kg (${opt.total_sacks_50kg} Karung 50kg)\n` +
+                      (opt.breakdown || []).map((b: any) => `  - ${b.fertilizer}: ${b.kg} kg (${b.sacks_50kg} krg)`).join('\n')
+                    ).join('\n\n') + `\n\n` +
+                    (combinationResult.subsidy_savings_rp > 0 ? `💰 *Penghematan Subsidi HET:* Rp ${combinationResult.subsidy_savings_rp.toLocaleString('id-ID')}\n\n` : '') +
+                    `🔗 _Dihasilkan via AgriSensa Official: https://agrisensaofficial.com/fertilizer_`}
+                  label="Kirim Hasil Formulasi ke Telegram 📱"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {combinationResult.options.map((opt: any, oIdx: number) => (
                 <div
                   key={oIdx}
                   className={`p-6 rounded-2xl border shadow-xl flex flex-col justify-between space-y-6 transition-all ${
@@ -608,6 +636,7 @@ export default function FertilizerPage() {
                   </div>
                 </div>
               ))}
+            </div>
             </div>
           )}
         </div>

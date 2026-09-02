@@ -26,6 +26,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { useLanguage } from "@/components/language-context";
+import { SendTelegramButton } from "@/components/send-telegram-button";
 
 interface SOPCommodity {
   name: string;
@@ -163,6 +164,26 @@ export default function SOPGeneratorPage() {
 
   const currentCropMeta = commodities.find((c) => c.name === selectedCommodity);
 
+  const buildSopTelegramMessage = () => {
+    if (!sopResult) return "";
+    const crop = sopResult.komoditas || selectedCommodity;
+    const luas = sopResult.luas_ha || luasHa;
+    const elevasi = sopResult.elevasi_mdpl || elevasiMdpl;
+    const phases = sopResult.fase_budidaya?.length || 0;
+    
+    return `🌾 *AGRISENSA PRECISION SOP REPORT* 📋\n\n` +
+      `📌 *Komoditas:* ${crop} (${sopResult.scientific_name || ''})\n` +
+      `📐 *Luas Lahan:* ${luas} Hektar\n` +
+      `⛰️ *Elevasi:* ${elevasi} mdpl | *Musim:* ${sopResult.musim || musim}\n` +
+      `⏱️ *Durasi:* ${sopResult.total_durasi_hst || 90} HST (${phases} Fase Budidaya)\n` +
+      `📈 *Potensi Panen:* ${sopResult.estimasi_yield_ton || '-'} Ton\n\n` +
+      `🌿 *Resep PHT Modul M-48:*\n` +
+      (sopResult.sop_pht_pestisida_nabati || []).map((p) => `• *${p.target_pest}:* ${p.botanical_formula}`).join('\n') + `\n\n` +
+      `📚 *Rujukan Ilmiah:*\n` +
+      (sopResult.referensi_jurnal_ilmiah || []).slice(0, 2).map((c) => `• ${c.title} (${c.journal}, ${c.year})`).join('\n') + `\n\n` +
+      `🔗 _Dihasilkan otomatis via AgriSensa Official: https://agrisensaofficial.com/sop_`;
+  };
+
   return (
     <div className="space-y-8 pb-16 text-slate-100 max-w-7xl mx-auto font-sans">
       {/* ─────────────────────────────────────────────────────────────────── */}
@@ -184,7 +205,11 @@ export default function SOPGeneratorPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <SendTelegramButton
+              message={buildSopTelegramMessage()}
+              label="Kirim ke Telegram 📱"
+            />
             <button
               onClick={() => window.print()}
               disabled={!sopResult}
