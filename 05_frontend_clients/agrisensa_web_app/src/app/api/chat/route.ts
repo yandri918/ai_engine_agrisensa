@@ -3,6 +3,27 @@ import { NextRequest, NextResponse } from "next/server";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 
+/** Ensure AI response text is clean UTF-8 */
+function toUtf8(text: string): string {
+  // Normalize unicode, preserve emoji & multilingual characters
+  return text
+    .normalize("NFC")
+    .replace(/\r\n/g, "\n")   // normalize line endings
+    .replace(/\r/g, "\n")
+    .trim();
+}
+
+/** Return JSON with explicit UTF-8 content-type header */
+function jsonUtf8(data: object, init?: ResponseInit) {
+  return new NextResponse(JSON.stringify(data), {
+    ...init,
+    status: (init as any)?.status ?? 200,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+    },
+  });
+}
+
 const MARKET_INTEL_CONTEXT = `
 [BASIS DATA INTELIJEN PASAR & KOMODITAS HARIAN AGRISENSA LIVE]:
 1. Cabai Merah Keriting: Rp 38.000 - Rp 46.000 / kg (Pasar Induk Kramat Jati, PIKJ & Pasar Induk Caringin). Tren: Fluktuasi stabil.
@@ -70,8 +91,8 @@ export async function POST(req: NextRequest) {
         const data = await geminiRes.json();
         const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (reply) {
-          return NextResponse.json({
-            response: reply,
+          return jsonUtf8({
+            response: toUtf8(reply),
             model: "Gemini 3.5 Flash (Deep Reasoning)",
           });
         }
@@ -115,8 +136,8 @@ export async function POST(req: NextRequest) {
         const data = await response.json();
         const reply = data.choices?.[0]?.message?.content;
         if (reply) {
-          return NextResponse.json({
-            response: reply,
+          return jsonUtf8({
+            response: toUtf8(reply),
             model: "DeepSeek-V3",
           });
         }
@@ -126,14 +147,14 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. TERTIARY: Dynamic Fallback
-    return NextResponse.json({
-      response: `### 🌾 Analisis Agronomi Presisi AgriSensa AI: "${message}"\n\n` +
-        `Kajian hara makro (N, P, K), biokimia tanah, dan perlindungan tanaman terpadu (PHT) siap disimulasikan sesuai komoditas pilihan Anda. Silakan tanyakan detail formulasi pupuk, pencegahan hama, atau kalkulasi per luas lahan.`,
+    return jsonUtf8({
+      response: toUtf8(`### 🌾 Analisis Agronomi Presisi AgriSensa AI: "${message}"\n\n` +
+        `Kajian hara makro (N, P, K), biokimia tanah, dan perlindungan tanaman terpadu (PHT) siap disimulasikan sesuai komoditas pilihan Anda. Silakan tanyakan detail formulasi pupuk, pencegahan hama, atau kalkulasi per luas lahan.`),
       model: "AgriSensa Agronomy Engine",
     });
   } catch (err: any) {
     console.error("Chat route critical error:", err);
-    return NextResponse.json(
+    return jsonUtf8(
       {
         response: "Maaf, terjadi kesalahan saat memproses pertanyaan Anda. Silakan coba sesaat lagi.",
         model: "AgriSensa System",

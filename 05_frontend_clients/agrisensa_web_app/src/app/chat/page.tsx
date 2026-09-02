@@ -31,12 +31,13 @@ export default function ChatPage() {
       id: "welcome",
       role: "assistant",
       content: `### 🌾 Halo! Saya AgriSensa AI Master Agronomist.
-Ditenagai langsung oleh **DeepSeek-V3 AI Reasoning Engine**.
+Ditenagai oleh **Google Gemini 3.5 Flash — Deep Reasoning Engine**.
 
-Saya siap memberikan panduan teknis mendalam dan solusi ilmiah untuk:
-1. **Formulasi Pemupukan Berimbang**: Dosis Urea, NPK, SP-36, KCl, dan pupuk organik per fase vegetatif/generatif.
+Saya siap memberikan kajian teknis mendalam, analitis, dan bervariasi setiap jawaban:
+1. **Formulasi Pemupukan Berimbang**: Dosis Urea, NPK, SP-36, KCl, dan pupuk organik per fase vegetatif/generatif (dalam kg/Ha & HST).
 2. **Pengendalian Hama & Penyakit (OPT)**: Diagnosa gejala serangan, ambang kendali ekonomi, dan rekomendasi agensia hayati (*Beauveria bassiana*, *Trichoderma*).
-3. **Koreksi Kondisi Tanah**: Kebutuhan kapur dolomit per hektar berdasarkan status pH dan antisipasi cekaman iklim.
+3. **Koreksi Kondisi Tanah & pH**: Kebutuhan kapur Dolomit per hektar berdasarkan status pH, KTK, dan antisipasi cekaman iklim.
+4. **Intelijen Harga Pasar**: Pemantauan harga komoditas cabai, bawang, jagung, beras, dan sawit secara terkini.
 
 *Silakan ketik pertanyaan Anda atau pilih topik cepat di bawah!*`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -134,10 +135,10 @@ Saya siap memberikan panduan teknis mendalam dan solusi ilmiah untuk:
             <div className="flex items-center gap-2">
               <h1 className="font-bold text-base text-white">Asisten AI Agronomi</h1>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                DeepSeek-V3 Engine
+                Gemini 3.5 Flash ✦
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Penalaran agronomi tropis & manajemen budidaya presisi UTF-8</p>
+            <p className="text-[11px] text-slate-400">Penalaran agronomi tropis & manajemen budidaya presisi</p>
           </div>
         </div>
 
@@ -257,7 +258,7 @@ Saya siap memberikan panduan teknis mendalam dan solusi ilmiah untuk:
             </div>
             <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 text-xs text-slate-300 rounded-tl-none flex items-center gap-2 shadow-lg">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="font-medium text-emerald-300">DeepSeek AI sedang memproses analisis agronomi...</span>
+              <span className="font-medium text-emerald-300">Gemini sedang memproses analisis agronomi mendalam...</span>
             </div>
           </div>
         )}
