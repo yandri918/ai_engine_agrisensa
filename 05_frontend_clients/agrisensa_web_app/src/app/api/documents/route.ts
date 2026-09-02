@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const AI_ENGINE_URL = process.env.NEXT_PUBLIC_AI_ENGINE_URL || "http://localhost:8001";
+const AI_ENGINE_URL =
+  process.env.AI_ENGINE_URL ||
+  process.env.NEXT_PUBLIC_AI_ENGINE_URL ||
+  "https://ai-engine-production-cc99.up.railway.app";
 
 export async function GET() {
   try {

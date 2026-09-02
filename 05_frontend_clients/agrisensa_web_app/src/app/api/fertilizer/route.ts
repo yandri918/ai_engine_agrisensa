@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const aiEngineUrl =
       process.env.AI_ENGINE_URL ||
       process.env.NEXT_PUBLIC_AI_ENGINE_URL ||
-      "http://localhost:8001";
+      "https://ai-engine-production-cc99.up.railway.app";
 
     const endpoint =
       action === "combination"
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const aiEngineUrl =
       process.env.AI_ENGINE_URL ||
       process.env.NEXT_PUBLIC_AI_ENGINE_URL ||
-      "http://localhost:8001";
+      "https://ai-engine-production-cc99.up.railway.app";
 
     const endpoint =
       type === "materials"
