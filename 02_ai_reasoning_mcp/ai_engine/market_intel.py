@@ -34,20 +34,52 @@ logger = logging.getLogger("agrisensa.market_intel")
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Referensi harga JA komoditas (mock untuk development, update dari scraping)
+# Referensi harga JA & Pasar Indonesia komoditas (Bilateral Market Database)
 JA_COMMODITY_MOCK = {
-    "wortel":     {"ja_name": "にんじん",   "base_price": 180, "unit": "円/kg", "season_peak": [10, 11, 12]},
-    "bawang":     {"ja_name": "たまねぎ",   "base_price": 120, "unit": "円/kg", "season_peak": [5, 6, 7]},
-    "tomat":      {"ja_name": "トマト",     "base_price": 280, "unit": "円/kg", "season_peak": [6, 7, 8]},
-    "cabai":      {"ja_name": "とうがらし", "base_price": 800, "unit": "円/kg", "season_peak": [7, 8, 9]},
-    "kentang":    {"ja_name": "じゃがいも", "base_price": 140, "unit": "円/kg", "season_peak": [6, 7, 8]},
-    "kubis":      {"ja_name": "キャベツ",   "base_price": 90,  "unit": "円/kg", "season_peak": [3, 4, 5]},
-    "mentimun":   {"ja_name": "きゅうり",   "base_price": 220, "unit": "円/kg", "season_peak": [6, 7, 8]},
-    "bayam":      {"ja_name": "ほうれんそう","base_price": 300, "unit": "円/kg", "season_peak": [10, 11, 12]},
-    "padi":       {"ja_name": "こめ",       "base_price": 380, "unit": "円/kg", "season_peak": [9, 10, 11]},
-    "jagung":     {"ja_name": "とうもろこし","base_price": 250, "unit": "円/本", "season_peak": [7, 8, 9]},
-    "edamame":    {"ja_name": "えだまめ",   "base_price": 450, "unit": "円/kg", "season_peak": [7, 8, 9]},
-    "daikon":     {"ja_name": "だいこん",   "base_price": 100, "unit": "円/本", "season_peak": [11, 12, 1]},
+    # 1. Sayuran & Hortikultura
+    "wortel":        {"ja_name": "にんじん",         "id_name": "Wortel Brastagi",          "category": "Hortikultura", "base_price": 180,  "id_price": 14000, "unit": "円/kg", "season_peak": [10, 11, 12]},
+    "bawang":        {"ja_name": "たまねぎ",         "id_name": "Bawang Bombay",            "category": "Hortikultura", "base_price": 140,  "id_price": 28000, "unit": "円/kg", "season_peak": [5, 6, 7]},
+    "bawang_merah":  {"ja_name": "赤たまねぎ",       "id_name": "Bawang Merah Brebes",      "category": "Hortikultura", "base_price": 520,  "id_price": 34000, "unit": "円/kg", "season_peak": [6, 7, 8]},
+    "bawang_putih":  {"ja_name": "にんにく",         "id_name": "Bawang Putih Honan",       "category": "Hortikultura", "base_price": 650,  "id_price": 38000, "unit": "円/kg", "season_peak": [4, 5, 6]},
+    "tomat":         {"ja_name": "トマト",           "id_name": "Tomat Servo",              "category": "Hortikultura", "base_price": 320,  "id_price": 16000, "unit": "円/kg", "season_peak": [6, 7, 8]},
+    "cabai":         {"ja_name": "とうがらし",       "id_name": "Cabai Merah Keriting",     "category": "Hortikultura", "base_price": 850,  "id_price": 42000, "unit": "円/kg", "season_peak": [7, 8, 9]},
+    "cabai_rawit":   {"ja_name": "バードアイチリ",   "id_name": "Cabai Rawit Merah",        "category": "Hortikultura", "base_price": 1200, "id_price": 46000, "unit": "円/kg", "season_peak": [6, 7, 8]},
+    "kentang":       {"ja_name": "じゃがいも",       "id_name": "Kentang Granola L",        "category": "Hortikultura", "base_price": 160,  "id_price": 18000, "unit": "円/kg", "season_peak": [6, 7, 8]},
+    "kubis":         {"ja_name": "キャベツ",         "id_name": "Kubis / Kol Hijau",        "category": "Hortikultura", "base_price": 95,   "id_price": 8500,  "unit": "円/kg", "season_peak": [3, 4, 5]},
+    "mentimun":      {"ja_name": "きゅうり",         "id_name": "Mentimun Jepang (Kyuri)",  "category": "Hortikultura", "base_price": 240,  "id_price": 9000,  "unit": "円/kg", "season_peak": [6, 7, 8]},
+    "bayam":         {"ja_name": "ほうれんそう",     "id_name": "Bayam Hijau (Horenso)",    "category": "Hortikultura", "base_price": 320,  "id_price": 12000, "unit": "円/kg", "season_peak": [10, 11, 12]},
+    "daikon":        {"ja_name": "だいこん",         "id_name": "Lobak Jepang (Daikon)",    "category": "Hortikultura", "base_price": 110,  "id_price": 15000, "unit": "円/本", "season_peak": [11, 12, 1]},
+    "terong":        {"ja_name": "なす",             "id_name": "Terong Ungu (Nasu)",       "category": "Hortikultura", "base_price": 260,  "id_price": 10000, "unit": "円/kg", "season_peak": [7, 8, 9]},
+    "shiitake":      {"ja_name": "しいたけ",         "id_name": "Jamur Shiitake",           "category": "Hortikultura", "base_price": 850,  "id_price": 45000, "unit": "円/kg", "season_peak": [10, 11, 12]},
+    "jahe":          {"ja_name": "しょうが",         "id_name": "Jahe Gajah / Emprit",      "category": "Hortikultura", "base_price": 420,  "id_price": 22000, "unit": "円/kg", "season_peak": [8, 9, 10]},
+
+    # 2. Pangan Pokok & Biji-bijian
+    "padi":          {"ja_name": "こめ (コシヒカリ)", "id_name": "Beras Premium Ciherang",   "category": "Pangan",       "base_price": 420,  "id_price": 15500, "unit": "円/kg", "season_peak": [9, 10, 11]},
+    "jagung":        {"ja_name": "とうもろこし",     "id_name": "Jagung Pipil Pakan",       "category": "Pangan",       "base_price": 260,  "id_price": 6500,  "unit": "円/kg", "season_peak": [7, 8, 9]},
+    "edamame":       {"ja_name": "えだまめ",         "id_name": "Kedelai Sayur (Edamame)",  "category": "Pangan",       "base_price": 480,  "id_price": 18000, "unit": "円/kg", "season_peak": [7, 8, 9]},
+    "kedelai":       {"ja_name": "だいず",           "id_name": "Kedelai Biji Kering",      "category": "Pangan",       "base_price": 340,  "id_price": 12500, "unit": "円/kg", "season_peak": [8, 9, 10]},
+    "singkong":      {"ja_name": "キャッサバ",       "id_name": "Ubi Kayu / Singkong",      "category": "Pangan",       "base_price": 280,  "id_price": 4500,  "unit": "円/kg", "season_peak": [6, 7, 8]},
+    "ubi_jalar":     {"ja_name": "さつまいも",       "id_name": "Ubi Jalar Cilembu",        "category": "Pangan",       "base_price": 280,  "id_price": 9000,  "unit": "円/kg", "season_peak": [9, 10, 11]},
+
+    # 3. Buah-buahan Premium
+    "melon_crown":   {"ja_name": "マスクメロン",     "id_name": "Melon Golden Inthanon",    "category": "Buah-buahan",  "base_price": 1800, "id_price": 28000, "unit": "円/kg", "season_peak": [6, 7, 8]},
+    "semangka":      {"ja_name": "すいか",           "id_name": "Semangka Non-Biji",        "category": "Buah-buahan",  "base_price": 350,  "id_price": 8500,  "unit": "円/kg", "season_peak": [6, 7, 8]},
+    "pisang":        {"ja_name": "バナナ",           "id_name": "Pisang Cavendish",         "category": "Buah-buahan",  "base_price": 240,  "id_price": 16000, "unit": "円/kg", "season_peak": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]},
+    "durian":        {"ja_name": "ドリアン",         "id_name": "Durian Musang King",       "category": "Buah-buahan",  "base_price": 3200, "id_price": 180000,"unit": "円/kg", "season_peak": [11, 12, 1]},
+    "stroberi":      {"ja_name": "あまおう苺",       "id_name": "Stroberi Sweet Heart",     "category": "Buah-buahan",  "base_price": 1400, "id_price": 95000, "unit": "円/kg", "season_peak": [1, 2, 3, 4]},
+    "anggur_muscat": {"ja_name": "シャインマスカット","id_name": "Anggur Shine Muscat",     "category": "Buah-buahan",  "base_price": 2800, "id_price": 120000,"unit": "円/kg", "season_peak": [8, 9, 10]},
+    "apel_fuji":     {"ja_name": "ふじりんご",       "id_name": "Apel Fuji Premium",        "category": "Buah-buahan",  "base_price": 420,  "id_price": 35000, "unit": "円/kg", "season_peak": [10, 11, 12]},
+    "jeruk_mikan":   {"ja_name": "温州みかん",       "id_name": "Jeruk Mikan Honey",        "category": "Buah-buahan",  "base_price": 380,  "id_price": 26000, "unit": "円/kg", "season_peak": [11, 12, 1]},
+
+    # 4. Perkebunan, Rempah & Spesialitas Ekspor
+    "kopi_arabika":  {"ja_name": "アラビカコーヒー", "id_name": "Kopi Arabika Gayo (Green Bean)", "category": "Perkebunan", "base_price": 2200, "id_price": 115000,"unit": "円/kg", "season_peak": [10, 11, 12]},
+    "kopi_robusta":  {"ja_name": "ロブスタコーヒー", "id_name": "Kopi Robusta Lampung",    "category": "Perkebunan", "base_price": 1100, "id_price": 65000, "unit": "円/kg", "season_peak": [6, 7, 8]},
+    "kakao":         {"ja_name": "発酵カカオ豆",     "id_name": "Biji Kakao Fermentasi",    "category": "Perkebunan", "base_price": 1350, "id_price": 78000, "unit": "円/kg", "season_peak": [5, 6, 7]},
+    "sawit_cpo":     {"ja_name": "パーム油 (CPO)",    "id_name": "Minyak Kelapa Sawit (CPO)", "category": "Perkebunan", "base_price": 180,  "id_price": 14200, "unit": "円/kg", "season_peak": [8, 9, 10]},
+    "vanili":        {"ja_name": "バニラビーンズ",   "id_name": "Vanili Gourmet Organik",   "category": "Perkebunan", "base_price": 18000,"id_price": 950000,"unit": "円/kg", "season_peak": [7, 8, 9]},
+    "cengkeh":       {"ja_name": "クローブ (丁子)",   "id_name": "Cengkeh Kering Maluku",    "category": "Perkebunan", "base_price": 2400, "id_price": 125000,"unit": "円/kg", "season_peak": [7, 8, 9]},
+    "lada_hitam":    {"ja_name": "黒コショウ",       "id_name": "Lada Hitam Lampung",       "category": "Perkebunan", "base_price": 1600, "id_price": 85000, "unit": "円/kg", "season_peak": [8, 9, 10]},
+    "teh_matcha":    {"ja_name": "宇治抹茶",         "id_name": "Teh Hijau / Matcha",       "category": "Perkebunan", "base_price": 4500, "id_price": 220000,"unit": "円/kg", "season_peak": [5, 6]},
 }
 
 JA_MARKET_REGIONS = {
