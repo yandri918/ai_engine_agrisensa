@@ -3,88 +3,89 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  MessageSquareCode,
-  FlaskConical,
-  TrendingUp,
-  Calculator,
-  LineChart,
-  Sparkles,
-  Beaker,
-} from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
 
-  const navigation = [
-    { name: "Command Center", href: "/", icon: LayoutDashboard },
-    { name: "Data Analyst Eksekutif", href: "/analyst", icon: Sparkles, badge: "AI Strategic" },
-    { name: "Laboratorium Pupuk", href: "/fertilizer", icon: Beaker, badge: "Organik & NPK" },
-    { name: "Laboratorium MLOps", href: "/mlops", icon: FlaskConical, badge: "Port 8000" },
-    { name: "Asisten AI Agronomi", href: "/chat", icon: MessageSquareCode, badge: "DeepSeek" },
-    { name: "Simulasi Monte Carlo", href: "/monte-carlo", icon: TrendingUp, badge: "10k Runs" },
-    { name: "Generator RAB Otomatis", href: "/rab", icon: Calculator },
-    { name: "Intelijen Pasar (ID/JP)", href: "/market", icon: LineChart },
+  const navigationSections = [
+    {
+      title: "Pusat Kontrol",
+      items: [
+        { name: "Command Center", href: "/" },
+        { name: "Data Analyst Eksekutif", href: "/analyst", tag: "AI Strategic" },
+      ],
+    },
+    {
+      title: "Laboratorium & Analisis",
+      items: [
+        { name: "Laboratorium Pupuk", href: "/fertilizer", tag: "Formulasi" },
+        { name: "Laboratorium MLOps", href: "/mlops", tag: "16 Komoditas" },
+        { name: "Asisten AI Agronomi", href: "/chat" },
+      ],
+    },
+    {
+      title: "Simulasi & Perencanaan",
+      items: [
+        { name: "Simulasi Monte Carlo", href: "/monte-carlo", tag: "10k Runs" },
+        { name: "Generator RAB Otomatis", href: "/rab", tag: "Baku" },
+        { name: "Intelijen Pasar", href: "/market", tag: "ID / JP" },
+      ],
+    },
   ];
 
   return (
-    <aside className="w-64 border-r border-slate-800/80 bg-[#070b14]/95 flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
+    <aside className="w-64 border-r border-slate-800/80 bg-[#070b14] flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)] font-sans select-none">
       <div className="p-4 space-y-6">
-        <div>
-          <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-            Modul Utama
-          </p>
-          <nav className="space-y-1">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
-                    isActive
-                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-sm"
-                      : "text-slate-300 hover:text-white hover:bg-slate-900/60"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      className={`w-4 h-4 transition-colors ${
-                        isActive ? "text-emerald-400" : "text-slate-400 group-hover:text-slate-200"
-                      }`}
-                    />
+        {navigationSections.map((section, sIdx) => (
+          <div key={sIdx} className="space-y-1.5">
+            <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              {section.title}
+            </p>
+            <nav className="space-y-1">
+              {section.items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                      isActive
+                        ? "bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500 font-bold"
+                        : "text-slate-300 hover:text-white hover:bg-slate-900/60"
+                    }`}
+                  >
                     <span>{item.name}</span>
-                  </div>
-                  {item.badge && (
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        isActive
-                          ? "bg-emerald-500/30 text-emerald-200"
-                          : "bg-slate-800 text-slate-400 group-hover:text-slate-300"
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+                    {item.tag && (
+                      <span
+                        className={`text-[9px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${
+                          isActive
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : "bg-slate-800/80 text-slate-400 group-hover:text-slate-300"
+                        }`}
+                      >
+                        {item.tag}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        ))}
       </div>
 
-      <div className="p-4 border-t border-slate-800/80 m-2 rounded-xl bg-slate-900/40">
-        <div className="flex items-center gap-2.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-          <div>
-            <p className="text-xs font-semibold text-white">AgriSensa Engine</p>
-            <p className="text-[10px] text-slate-400">Status: Terhubung & Aktif</p>
-          </div>
+      <div className="p-4 border-t border-slate-800/80 mx-3 mb-4 rounded-lg bg-slate-900/40">
+        <div className="space-y-0.5">
+          <p className="text-[11px] font-bold tracking-wider text-slate-200 uppercase">
+            AgriSensa Engine
+          </p>
+          <p className="text-[10px] font-medium text-emerald-400">
+            Sistem Aktif & Terhubung
+          </p>
         </div>
       </div>
     </aside>
   );
 }
+
 
