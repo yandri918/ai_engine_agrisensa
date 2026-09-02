@@ -3,54 +3,68 @@
 import React from "react";
 import Link from "next/link";
 import { ServiceStatusBadge } from "./service-status-badge";
-import { Sprout, Sparkles, Bell, Globe, Search } from "lucide-react";
+import { useNavigation } from "./navigation-context";
+import { Sprout, Sparkles, Menu, X } from "lucide-react";
 
 export function Navbar() {
+  const { isMobileOpen, toggleMobile } = useNavigation();
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-[#070b14]/80 backdrop-blur-xl">
-      <div className="flex h-16 items-center justify-between px-4 md:px-8">
-        {/* Logo & Tagline */}
-        <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-[#070b14]/90 backdrop-blur-xl">
+      <div className="flex h-16 items-center justify-between px-3 sm:px-4 md:px-8">
+        {/* Left: Mobile Hamburger & Logo */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={toggleMobile}
+            className="md:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800 transition-all focus:outline-none"
+            aria-label="Buka Menu Navigasi"
+          >
+            {isMobileOpen ? (
+              <X className="h-5 w-5 text-emerald-400" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
+
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform shrink-0">
               <div className="h-full w-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <Sprout className="h-5 w-5 text-emerald-400" />
+                <Sprout className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400" />
               </div>
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg tracking-tight text-white group-hover:text-emerald-400 transition-colors">
+                <span className="font-extrabold text-base sm:text-lg tracking-tight text-white group-hover:text-emerald-400 transition-colors">
                   AgriSensa
                 </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="text-[9px] sm:text-[10px] uppercase font-extrabold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   AI v2.0
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium hidden sm:block">
-                Unified Smart Agriculture & MLOps
+              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium hidden sm:block truncate max-w-[200px] lg:max-w-none">
+                Smart Agriculture & MLOps Engine
               </p>
             </div>
           </Link>
         </div>
 
-        {/* Live Engine Status Badge */}
-        <div className="flex items-center gap-4">
+        {/* Right: Engine Status & AI Chat Quick Action */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <ServiceStatusBadge />
 
           <div className="hidden lg:flex items-center gap-2 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-400">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>DeepSeek-V3 Engine Active</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>DeepSeek-V3 Active</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/chat"
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Buka AI Chat</span>
-            </Link>
-          </div>
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md shadow-emerald-500/20 transition-all active:scale-95 shrink-0"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Buka AI Chat</span>
+            <span className="sm:hidden">AI Chat</span>
+          </Link>
         </div>
       </div>
     </header>
