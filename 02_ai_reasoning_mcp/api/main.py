@@ -994,7 +994,43 @@ async def generate_commodity_sop(req: SOPGenerateRequest):
         logger.error(f"Error generating SOP for {req.komoditas}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Telegram Notification & Bot Dispatcher
+# ─────────────────────────────────────────────────────────────────────────────
 
+class TelegramSendRequest(BaseModel):
+    message: str = Field(..., description="Teks pesan markdown yang akan dikirim")
+    chat_id: Optional[str] = Field(None, description="Chat ID tujuan (default: TELEGRAM_ADMIN_CHAT_ID)")
+    parse_mode: str = Field("Markdown", description="Parse mode: Markdown / HTML")
+
+@app.post("/telegram/send", summary="Kirim Notifikasi / Laporan ke Telegram Bot", tags=["Notifications"])
+async def send_telegram_notification(req: TelegramSendRequest):
+    """Mengirim pesan langsung ke Telegram Bot yang terdaftar di konfigurasi sistem."""
+    import urllib.request
+    import json
+    
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "8833555127:AAEJMkWwEuLT49cDz1Kx0dccU92Jqo4Wmqs")
+    chat_id = req.chat_id or os.environ.get("TELEGRAM_ADMIN_CHAT_ID", "6350008299")
+    
+    if not token or not chat_id:
+        raise HTTPException(status_code=500, detail="Telegram credentials missing in environment")
+        
+    try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = json.dumps({
+            "chat_id": chat_id,
+            "text": req.message,
+            "parse_mode": req.parse_mode,
+            "disable_web_page_preview": True
+        }).encode("utf-8")
+        
+        http_req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(http_req, timeout=10) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            return {"success": True, "result": res_data.get("result", {})}
+    except Exception as e:
+        logger.error(f"Failed to send Telegram message: {e}")
+        raise HTTPException(status_code=500, detail=f"Telegram error: {str(e)}")
 
 
 if __name__ == "__main__":
@@ -1007,4 +1043,5 @@ if __name__ == "__main__":
         reload=True,
         log_level="info",
     )
+
 
