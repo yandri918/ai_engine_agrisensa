@@ -25,12 +25,16 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-[#070b14] text-slate-100 antialiased selection:bg-emerald-500 selection:text-slate-950">
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <div className="flex flex-1 overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-gradient-to-b from-[#070b14] via-[#090e1a] to-[#070b14]">
+      <body className="min-h-screen bg-[#070b14] text-slate-100 antialiased selection:bg-emerald-500 selection:text-slate-950 print:bg-white print:text-black">
+        <div className="flex flex-col min-h-screen print:min-h-0 print:block">
+          <div className="print:hidden">
+            <Navbar />
+          </div>
+          <div className="flex flex-1 overflow-hidden print:overflow-visible print:block">
+            <div className="print:hidden">
+              <Sidebar />
+            </div>
+            <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-gradient-to-b from-[#070b14] via-[#090e1a] to-[#070b14] print:p-0 print:bg-none print:overflow-visible print:block">
               {children}
             </main>
           </div>

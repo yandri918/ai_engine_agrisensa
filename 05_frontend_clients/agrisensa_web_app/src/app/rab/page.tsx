@@ -350,361 +350,469 @@ export default function RABPage() {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* PRINT-ONLY OFFICIAL HEADER                                         */}
+      {/* PRINT-ONLY: DOKUMEN RESMI STANDAR BAKU RENCANA ANGGARAN BIAYA (RAB) */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="hidden print:block border-b-2 border-black pb-4 mb-6">
-        <div className="flex justify-between items-center">
+      <div className="hidden print:block font-serif text-black space-y-6">
+        {/* Kop Surat Dokumen */}
+        <div className="border-b-2 border-black pb-3 text-center space-y-1">
+          <h1 className="text-xl font-extrabold uppercase tracking-wider">
+            AGRISENSA FARM BUDGETING & ENGINEERING
+          </h1>
+          <p className="text-xs font-semibold text-gray-700">
+            DOKUMEN RENCANA ANGGARAN BIAYA (RAB) USAHA TANI STANDAR BAKU
+          </p>
+          <p className="text-[10px] text-gray-500 italic">
+            Nomor Dokumen: RAB/{selectedTemplate?.id.toUpperCase()}/{new Date().getFullYear()}/{Math.floor(1000 + Math.random() * 9000)}
+          </p>
+        </div>
+
+        {/* Tabel Metadata Identitas Proyek */}
+        <div className="border border-black p-3 text-xs grid grid-cols-2 gap-x-6 gap-y-1.5 bg-gray-50">
           <div>
-            <h1 className="text-xl font-bold uppercase tracking-wide">AgriSensa Farm Budgeting & Engineering</h1>
-            <p className="text-xs text-gray-600">Dokumen Rencana Anggaran Biaya (RAB) Usaha Tani Standar Baku</p>
+            <span className="font-bold">Komoditas Usaha Tani:</span> {selectedTemplate?.name}
           </div>
-          <div className="text-right text-xs">
-            <p><strong>Komoditas:</strong> {selectedTemplate?.name}</p>
-            <p><strong>Skala Lahan:</strong> {landArea} Hektar</p>
-            <p><strong>Tanggal Cetak:</strong> {new Date().toLocaleDateString("id-ID")}</p>
+          <div>
+            <span className="font-bold">Skala Luas Lahan:</span> {landArea} Hektar
+          </div>
+          <div>
+            <span className="font-bold">Estimasi Hasil Panen:</span> {estimatedYield} Ton/Ha (Total: {totalHarvestKg.toLocaleString("id-ID")} kg)
+          </div>
+          <div>
+            <span className="font-bold">Asumsi Harga Jual:</span> Rp {sellingPrice.toLocaleString("id-ID")} / kg
+          </div>
+          <div>
+            <span className="font-bold">Durasi Musim Tanam:</span> {selectedTemplate?.durationMonths} Bulan
+          </div>
+          <div>
+            <span className="font-bold">Tanggal Diterbitkan:</span> {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
           </div>
         </div>
-      </div>
 
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* STEP 1: CROP TEMPLATE SELECTOR & PRIMARY CONTROLS                  */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="p-6 rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl space-y-5 print:hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Sprout className="w-4 h-4 text-purple-400" />
-              <h3 className="font-bold text-white text-base">Pilih Standar Baku Komoditas Budidaya</h3>
+        {/* Ringkasan Finansial Eksekutif */}
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-bold uppercase tracking-wide border-b border-black pb-0.5">
+            I. Ringkasan Kelayakan Finansial & Proyeksi Usaha
+          </h3>
+          <div className="grid grid-cols-4 gap-2 text-center text-xs">
+            <div className="border border-black p-2 bg-gray-50">
+              <span className="text-[10px] text-gray-600 block uppercase font-bold">Total Biaya (RAB)</span>
+              <strong className="text-sm font-bold">Rp {totalCost.toLocaleString("id-ID")}</strong>
             </div>
-            <p className="text-xs text-slate-400">Pilih template komoditas untuk memuat resep dosis pupuk, benih, dan alokasi HOK teruji.</p>
-          </div>
-
-          {/* Template Selector Dropdown */}
-          <div className="w-full md:w-80">
-            <select
-              value={selectedTemplateId}
-              onChange={(e) => handleSelectTemplate(e.target.value)}
-              className="w-full bg-slate-950 border border-purple-500/50 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-purple-400 font-bold"
-            >
-              {CROP_RAB_TEMPLATES.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.category})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Dynamic Inputs: Land Area, Selling Price, Estimated Yield */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <label className="text-[11px] font-bold text-slate-400 uppercase">Luas Lahan (Hektar)</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0.01"
-                step="0.1"
-                value={landArea}
-                onChange={(e) => setLandArea(Math.max(0.01, Number(e.target.value)))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono font-bold focus:outline-none focus:border-purple-500"
-              />
-              <span className="text-xs text-purple-400 font-bold">Ha</span>
+            <div className="border border-black p-2 bg-gray-50">
+              <span className="text-[10px] text-gray-600 block uppercase font-bold">Estimasi Omset</span>
+              <strong className="text-sm font-bold">Rp {totalRevenue.toLocaleString("id-ID")}</strong>
+            </div>
+            <div className="border border-black p-2 bg-gray-50">
+              <span className="text-[10px] text-gray-600 block uppercase font-bold">Proyeksi Laba Bersih</span>
+              <strong className="text-sm font-bold">Rp {netProfit.toLocaleString("id-ID")}</strong>
+            </div>
+            <div className="border border-black p-2 bg-gray-50">
+              <span className="text-[10px] text-gray-600 block uppercase font-bold">ROI / MOS</span>
+              <strong className="text-sm font-bold">{roiPercent.toFixed(1)}% / {marginOfSafety.toFixed(1)}%</strong>
             </div>
           </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <label className="text-[11px] font-bold text-slate-400 uppercase">Estimasi Hasil Panen</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0.1"
-                step="0.5"
-                value={estimatedYield}
-                onChange={(e) => setEstimatedYield(Math.max(0.1, Number(e.target.value)))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono font-bold focus:outline-none focus:border-purple-500"
-              />
-              <span className="text-xs text-emerald-400 font-bold">ton/Ha</span>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <label className="text-[11px] font-bold text-slate-400 uppercase">Asumsi Harga Jual (Rp/kg)</label>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-mono">Rp</span>
-              <input
-                type="number"
-                min="500"
-                step="500"
-                value={sellingPrice}
-                onChange={(e) => setSellingPrice(Math.max(500, Number(e.target.value)))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono font-bold focus:outline-none focus:border-purple-500"
-              />
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <label className="text-[11px] font-bold text-slate-400 uppercase">Durasi Siklus Budidaya</label>
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-sm font-extrabold text-white font-mono">{selectedTemplate?.durationMonths} Bulan</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
-                {selectedTemplate?.category}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* FINANCIAL INTELLIGENCE SUMMARY KPI CARDS                           */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl print:border-gray-300">
-          <p className="text-[10px] text-slate-400 uppercase font-extrabold print:text-black">Total Biaya Operasional (RAB)</p>
-          <p className="text-xl md:text-2xl font-black text-white mt-1 font-mono print:text-black">
-            Rp {totalCost.toLocaleString("id-ID")}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5 print:text-gray-600">
-            HPP: <strong className="text-slate-300 print:text-black">Rp {Math.round(hppPerKg).toLocaleString("id-ID")}/kg</strong>
-          </p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-[#090e18] border border-blue-500/30 shadow-xl print:border-gray-300">
-          <p className="text-[10px] text-blue-400 uppercase font-extrabold print:text-black">Estimasi Total Pendapatan</p>
-          <p className="text-xl md:text-2xl font-black text-blue-400 mt-1 font-mono print:text-black">
-            Rp {totalRevenue.toLocaleString("id-ID")}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5 print:text-gray-600">
-            Total Panen: <strong className="text-blue-300 print:text-black">{totalHarvestKg.toLocaleString("id-ID")} kg</strong>
-          </p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-[#090e18] border border-emerald-500/30 shadow-xl print:border-gray-300">
-          <p className="text-[10px] text-emerald-400 uppercase font-extrabold print:text-black">Proyeksi Laba Bersih</p>
-          <p className={`text-xl md:text-2xl font-black mt-1 font-mono ${netProfit >= 0 ? "text-emerald-400" : "text-rose-400"} print:text-black`}>
-            Rp {netProfit.toLocaleString("id-ID")}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5 print:text-gray-600">
-            ROI: <strong className="text-emerald-300 print:text-black">{roiPercent.toFixed(1)}%</strong>
-          </p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-[#090e18] border border-amber-500/30 shadow-xl print:border-gray-300">
-          <p className="text-[10px] text-amber-400 uppercase font-extrabold print:text-black">Batas Aman BEP (Break-Even)</p>
-          <p className="text-xl md:text-2xl font-black text-amber-400 mt-1 font-mono print:text-black">
-            {Math.round(bepKg).toLocaleString("id-ID")} <span className="text-xs font-normal">kg</span>
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5 print:text-gray-600">
-            Margin of Safety: <strong className="text-amber-300 print:text-black">{marginOfSafety.toFixed(1)}%</strong>
-          </p>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* COST PROPORTIONS CHART & 3 SCENARIO SIMULATION                     */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:hidden">
-        {/* Cost Category Breakdown Chart (6 cols) */}
-        <div className="lg:col-span-6 p-6 rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl space-y-4">
-          <h4 className="text-xs font-bold text-white flex items-center gap-2">
-            <Layers className="w-4 h-4 text-purple-400" />
-            Struktur Proporsi Biaya Usaha Tani
-          </h4>
-          <div className="h-56 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categoryTotals} layout="vertical" margin={{ left: 15, right: 15 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis type="number" stroke="#64748b" tickFormatter={(v) => `Rp ${(v / 1e6).toFixed(1)}jt`} />
-                <YAxis dataKey="category" type="category" stroke="#94a3b8" tick={{ fontSize: 11 }} width={120} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: 8, color: "#fff" }}
-                  formatter={(v: any) => [`Rp ${Number(v).toLocaleString("id-ID")}`, "Total Biaya"]}
-                />
-                <Bar dataKey="total" radius={[0, 4, 4, 0]}>
-                  {categoryTotals.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={["#8b5cf6", "#10b981", "#3b82f6", "#f59e0b", "#ec4899", "#64748b"][index % 6]}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="text-[11px] flex justify-between pt-1 text-gray-700">
+            <span>Harga Pokok Produksi (HPP): <strong>Rp {Math.round(hppPerKg).toLocaleString("id-ID")} / kg</strong></span>
+            <span>Titik Impas (BEP Volume): <strong>{Math.round(bepKg).toLocaleString("id-ID")} kg</strong></span>
+            <span>Titik Impas (BEP Harga): <strong>Rp {Math.round(hppPerKg).toLocaleString("id-ID")} / kg</strong></span>
           </div>
         </div>
 
-        {/* 3 Scenario Projection (6 cols) */}
-        <div className="lg:col-span-6 p-6 rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl space-y-4">
-          <h4 className="text-xs font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            Simulasi 3 Skenario Panen & Keuntungan
-          </h4>
-
-          <div className="grid grid-cols-3 gap-3 pt-2">
-            {/* Optimis */}
-            <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center space-y-1">
-              <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider">Optimis (+20%)</span>
-              <p className="text-sm font-black text-white font-mono mt-1">
-                Rp {Math.round(totalRevenue * 1.38 - totalCost * 0.95).toLocaleString("id-ID")}
-              </p>
-              <p className="text-[10px] text-emerald-300">Panen: {(estimatedYield * 1.2).toFixed(1)} t/Ha</p>
-              <p className="text-[10px] text-slate-400">Harga: +15%</p>
-            </div>
-
-            {/* Moderat */}
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-700 text-center space-y-1">
-              <span className="text-[10px] font-extrabold text-sky-400 uppercase tracking-wider">Moderat (Sesuai)</span>
-              <p className="text-sm font-black text-white font-mono mt-1">
-                Rp {Math.round(netProfit).toLocaleString("id-ID")}
-              </p>
-              <p className="text-[10px] text-sky-300">Panen: {estimatedYield.toFixed(1)} t/Ha</p>
-              <p className="text-[10px] text-slate-400">Harga: Normal</p>
-            </div>
-
-            {/* Pesimis */}
-            <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-center space-y-1">
-              <span className="text-[10px] font-extrabold text-rose-400 uppercase tracking-wider">Pesimis (-20%)</span>
-              <p className="text-sm font-black text-white font-mono mt-1">
-                Rp {Math.round(totalRevenue * 0.68 - totalCost * 1.05).toLocaleString("id-ID")}
-              </p>
-              <p className="text-[10px] text-rose-300">Panen: {(estimatedYield * 0.8).toFixed(1)} t/Ha</p>
-              <p className="text-[10px] text-slate-400">Harga: -15%</p>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/20 text-[11px] text-slate-300">
-            <strong>Catatan Analisis:</strong> Dengan BEP sebesar <strong>{Math.round(bepKg).toLocaleString("id-ID")} kg</strong>, usaha tani ini memiliki ketahanan risiko tinggi (Margin of Safety {marginOfSafety.toFixed(1)}%).
-          </div>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* DETAILED BUDGET ITEMS TABLE WITH DYNAMIC EDIT & HOK PROPORTIONS    */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl overflow-hidden print:border-none print:shadow-none print:bg-white">
-        {/* Table Filter & Add Actions */}
-        <div className="p-5 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              onClick={() => setSelectedCategoryFilter("ALL")}
-              className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all ${
-                selectedCategoryFilter === "ALL"
-                  ? "bg-purple-500 text-slate-950 shadow"
-                  : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
-              }`}
-            >
-              Semua Kategori ({items.length})
-            </button>
-            {categoriesList.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategoryFilter(cat)}
-                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
-                  selectedCategoryFilter === cat
-                    ? "bg-purple-500 text-slate-950 font-bold shadow"
-                    : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={handleAddItem}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all self-start md:self-auto"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Tambah Item Biaya</span>
-          </button>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left print:text-[10px]">
-            <thead className="text-[10px] uppercase text-slate-400 bg-slate-900 border-b border-slate-800 print:bg-gray-100 print:text-black">
-              <tr>
-                <th className="px-4 py-3">No</th>
-                <th className="px-4 py-3">Kategori</th>
-                <th className="px-4 py-3">Nama Komponen Biaya</th>
-                <th className="px-4 py-3 text-right">Volume / Ha</th>
-                <th className="px-4 py-3 text-right">Total Volume ({landArea} Ha)</th>
-                <th className="px-4 py-3 text-right">Harga Satuan (Rp)</th>
-                <th className="px-4 py-3 text-right">Subtotal Biaya (Rp)</th>
-                <th className="px-4 py-3 text-center print:hidden">Aksi</th>
+        {/* Tabel Detail Rincian Biaya */}
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-bold uppercase tracking-wide border-b border-black pb-0.5">
+            II. Rincian Komponen Biaya Sarana Produksi & Tenaga Kerja (HOK)
+          </h3>
+          <table className="w-full text-[10px] border-collapse border border-black">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-black px-2 py-1 text-center w-8">No</th>
+                <th className="border border-black px-2 py-1 text-left w-32">Kategori</th>
+                <th className="border border-black px-2 py-1 text-left">Deskripsi Komponen Biaya</th>
+                <th className="border border-black px-2 py-1 text-right w-20">Volume/Ha</th>
+                <th className="border border-black px-2 py-1 text-right w-24">Total Vol ({landArea} Ha)</th>
+                <th className="border border-black px-2 py-1 text-right w-24">Harga Satuan (Rp)</th>
+                <th className="border border-black px-2 py-1 text-right w-28">Subtotal (Rp)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 print:divide-gray-300">
-              {filteredItems.map((item, idx) => {
+            <tbody>
+              {items.map((item, idx) => {
                 const scaledVolume = item.qtyPerHa * landArea;
                 const subtotal = scaledVolume * item.unitPrice;
-
                 return (
-                  <tr key={item.id} className="hover:bg-slate-900/40 transition-colors print:text-black">
-                    <td className="px-4 py-3 text-slate-500 font-mono">{idx + 1}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] text-slate-300 print:border-none print:text-black">
-                        {item.category}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-white print:text-black">
-                      <input
-                        type="text"
-                        value={item.name}
-                        onChange={(e) => handleItemChange(item.id, "name", e.target.value)}
-                        className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-purple-500 focus:outline-none w-full text-xs font-semibold print:border-none"
-                      />
-                      {item.notes && <p className="text-[10px] text-slate-500 print:hidden">{item.notes}</p>}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-slate-300 print:text-black">
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={item.qtyPerHa}
-                        onChange={(e) => handleItemChange(item.id, "qtyPerHa", Number(e.target.value))}
-                        className="w-16 text-right bg-slate-950/60 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white font-mono focus:outline-none focus:border-purple-500 print:bg-transparent print:border-none print:text-black"
-                      />{" "}
-                      <span className="text-[10px] text-slate-500">{item.unit}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-purple-300 print:text-black">
+                  <tr key={item.id}>
+                    <td className="border border-black px-2 py-1 text-center">{idx + 1}</td>
+                    <td className="border border-black px-2 py-1">{item.category}</td>
+                    <td className="border border-black px-2 py-1 font-medium">{item.name}</td>
+                    <td className="border border-black px-2 py-1 text-right">{item.qtyPerHa} {item.unit}</td>
+                    <td className="border border-black px-2 py-1 text-right font-bold">
                       {scaledVolume.toLocaleString("id-ID", { maximumFractionDigits: 1 })} {item.unit}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-slate-300 print:text-black">
-                      <input
-                        type="number"
-                        step="100"
-                        value={item.unitPrice}
-                        onChange={(e) => handleItemChange(item.id, "unitPrice", Number(e.target.value))}
-                        className="w-24 text-right bg-slate-950/60 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white font-mono focus:outline-none focus:border-purple-500 print:bg-transparent print:border-none print:text-black"
-                      />
+                    <td className="border border-black px-2 py-1 text-right">
+                      {item.unitPrice.toLocaleString("id-ID")}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-black text-emerald-400 print:text-black">
-                      Rp {Math.round(subtotal).toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-4 py-3 text-center print:hidden">
-                      <button
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
-                        title="Hapus baris"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                    <td className="border border-black px-2 py-1 text-right font-bold">
+                      {Math.round(subtotal).toLocaleString("id-ID")}
                     </td>
                   </tr>
                 );
               })}
             </tbody>
-            <tfoot className="border-t-2 border-slate-700 bg-slate-900/90 font-extrabold print:bg-gray-100 print:text-black">
-              <tr>
-                <td colSpan={6} className="px-4 py-3 text-right text-xs uppercase text-slate-300 print:text-black">
-                  Total Rencana Anggaran Biaya (RAB):
+            <tfoot>
+              <tr className="bg-gray-100 font-bold">
+                <td colSpan={6} className="border border-black px-2 py-1.5 text-right uppercase">
+                  TOTAL KEBUTUHAN MODAL USAHA TANI (RAB):
                 </td>
-                <td className="px-4 py-3 text-right text-sm text-emerald-400 font-mono font-black print:text-black">
+                <td className="border border-black px-2 py-1.5 text-right text-xs">
                   Rp {totalCost.toLocaleString("id-ID")}
                 </td>
-                <td className="print:hidden"></td>
               </tr>
             </tfoot>
           </table>
+        </div>
+
+        {/* Kolom Tanda Tangan & Pengesahan */}
+        <div className="pt-6 grid grid-cols-2 gap-12 text-xs text-center print-page-break">
+          <div className="space-y-16">
+            <p>Dibuat dan Diajukan Oleh,<br /><span className="font-bold">Agronomis / Pengelola Usaha Tani</span></p>
+            <p className="border-t border-black pt-1 w-48 mx-auto font-bold">( ............................................ )</p>
+          </div>
+          <div className="space-y-16">
+            <p>Disetujui dan Disahkan Oleh,<br /><span className="font-bold">Investor / Pemilik Lahan</span></p>
+            <p className="border-t border-black pt-1 w-48 mx-auto font-bold">( ............................................ )</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* SCREEN-ONLY: INTERACTIVE DASHBOARD & CONTROLS                       */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <div className="print:hidden space-y-8">
+        {/* STEP 1: CROP TEMPLATE SELECTOR & PRIMARY CONTROLS */}
+        <div className="p-6 rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl space-y-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Sprout className="w-4 h-4 text-purple-400" />
+                <h3 className="font-bold text-white text-base">Pilih Standar Baku Komoditas Budidaya</h3>
+              </div>
+              <p className="text-xs text-slate-400">Pilih template komoditas untuk memuat resep dosis pupuk, benih, dan alokasi HOK teruji.</p>
+            </div>
+
+            {/* Template Selector Dropdown */}
+            <div className="w-full md:w-80">
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => handleSelectTemplate(e.target.value)}
+                className="w-full bg-slate-950 border border-purple-500/50 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-purple-400 font-bold"
+              >
+                {CROP_RAB_TEMPLATES.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.category})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Dynamic Inputs: Land Area, Selling Price, Estimated Yield */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase">Luas Lahan (Hektar)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.1"
+                  value={landArea}
+                  onChange={(e) => setLandArea(Math.max(0.01, Number(e.target.value)))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono font-bold focus:outline-none focus:border-purple-500"
+                />
+                <span className="text-xs text-purple-400 font-bold">Ha</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase">Estimasi Hasil Panen</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.5"
+                  value={estimatedYield}
+                  onChange={(e) => setEstimatedYield(Math.max(0.1, Number(e.target.value)))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono font-bold focus:outline-none focus:border-purple-500"
+                />
+                <span className="text-xs text-emerald-400 font-bold">ton/Ha</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase">Asumsi Harga Jual (Rp/kg)</label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 font-mono">Rp</span>
+                <input
+                  type="number"
+                  min="500"
+                  step="500"
+                  value={sellingPrice}
+                  onChange={(e) => setSellingPrice(Math.max(500, Number(e.target.value)))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono font-bold focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase">Durasi Siklus Budidaya</label>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-sm font-extrabold text-white font-mono">{selectedTemplate?.durationMonths} Bulan</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+                  {selectedTemplate?.category}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* FINANCIAL INTELLIGENCE SUMMARY KPI CARDS */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="p-5 rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl">
+            <p className="text-[10px] text-slate-400 uppercase font-extrabold">Total Biaya Operasional (RAB)</p>
+            <p className="text-xl md:text-2xl font-black text-white mt-1 font-mono">
+              Rp {totalCost.toLocaleString("id-ID")}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              HPP: <strong className="text-slate-300">Rp {Math.round(hppPerKg).toLocaleString("id-ID")}/kg</strong>
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#090e18] border border-blue-500/30 shadow-xl">
+            <p className="text-[10px] text-blue-400 uppercase font-extrabold">Estimasi Total Pendapatan</p>
+            <p className="text-xl md:text-2xl font-black text-blue-400 mt-1 font-mono">
+              Rp {totalRevenue.toLocaleString("id-ID")}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Total Panen: <strong className="text-blue-300">{totalHarvestKg.toLocaleString("id-ID")} kg</strong>
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#090e18] border border-emerald-500/30 shadow-xl">
+            <p className="text-[10px] text-emerald-400 uppercase font-extrabold">Proyeksi Laba Bersih</p>
+            <p className={`text-xl md:text-2xl font-black mt-1 font-mono ${netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+              Rp {netProfit.toLocaleString("id-ID")}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              ROI: <strong className="text-emerald-300">{roiPercent.toFixed(1)}%</strong>
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#090e18] border border-amber-500/30 shadow-xl">
+            <p className="text-[10px] text-amber-400 uppercase font-extrabold">Batas Aman BEP (Break-Even)</p>
+            <p className="text-xl md:text-2xl font-black text-amber-400 mt-1 font-mono">
+              {Math.round(bepKg).toLocaleString("id-ID")} <span className="text-xs font-normal">kg</span>
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Margin of Safety: <strong className="text-amber-300">{marginOfSafety.toFixed(1)}%</strong>
+            </p>
+          </div>
+        </div>
+
+        {/* COST PROPORTIONS CHART & 3 SCENARIOS */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-6 p-6 rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl space-y-4">
+            <h4 className="text-xs font-bold text-white flex items-center gap-2">
+              <Layers className="w-4 h-4 text-purple-400" />
+              Struktur Proporsi Biaya Usaha Tani
+            </h4>
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={categoryTotals} layout="vertical" margin={{ left: 15, right: 15 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis type="number" stroke="#64748b" tickFormatter={(v) => `Rp ${(v / 1e6).toFixed(1)}jt`} />
+                  <YAxis dataKey="category" type="category" stroke="#94a3b8" tick={{ fontSize: 11 }} width={120} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: 8, color: "#fff" }}
+                    formatter={(v: any) => [`Rp ${Number(v).toLocaleString("id-ID")}`, "Total Biaya"]}
+                  />
+                  <Bar dataKey="total" radius={[0, 4, 4, 0]}>
+                    {categoryTotals.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={["#8b5cf6", "#10b981", "#3b82f6", "#f59e0b", "#ec4899", "#64748b"][index % 6]}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="lg:col-span-6 p-6 rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl space-y-4">
+            <h4 className="text-xs font-bold text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              Simulasi 3 Skenario Panen & Keuntungan
+            </h4>
+
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center space-y-1">
+                <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider">Optimis (+20%)</span>
+                <p className="text-sm font-black text-white font-mono mt-1">
+                  Rp {Math.round(totalRevenue * 1.38 - totalCost * 0.95).toLocaleString("id-ID")}
+                </p>
+                <p className="text-[10px] text-emerald-300">Panen: {(estimatedYield * 1.2).toFixed(1)} t/Ha</p>
+                <p className="text-[10px] text-slate-400">Harga: +15%</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-700 text-center space-y-1">
+                <span className="text-[10px] font-extrabold text-sky-400 uppercase tracking-wider">Moderat (Sesuai)</span>
+                <p className="text-sm font-black text-white font-mono mt-1">
+                  Rp {Math.round(netProfit).toLocaleString("id-ID")}
+                </p>
+                <p className="text-[10px] text-sky-300">Panen: {estimatedYield.toFixed(1)} t/Ha</p>
+                <p className="text-[10px] text-slate-400">Harga: Normal</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-center space-y-1">
+                <span className="text-[10px] font-extrabold text-rose-400 uppercase tracking-wider">Pesimis (-20%)</span>
+                <p className="text-sm font-black text-white font-mono mt-1">
+                  Rp {Math.round(totalRevenue * 0.68 - totalCost * 1.05).toLocaleString("id-ID")}
+                </p>
+                <p className="text-[10px] text-rose-300">Panen: {(estimatedYield * 0.8).toFixed(1)} t/Ha</p>
+                <p className="text-[10px] text-slate-400">Harga: -15%</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/20 text-[11px] text-slate-300">
+              <strong>Catatan Analisis:</strong> Dengan BEP sebesar <strong>{Math.round(bepKg).toLocaleString("id-ID")} kg</strong>, usaha tani ini memiliki ketahanan risiko tinggi (Margin of Safety {marginOfSafety.toFixed(1)}%).
+            </div>
+          </div>
+        </div>
+
+        {/* DETAILED BUDGET ITEMS TABLE */}
+        <div className="rounded-2xl bg-[#090e18] border border-slate-800 shadow-xl overflow-hidden">
+          <div className="p-5 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setSelectedCategoryFilter("ALL")}
+                className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  selectedCategoryFilter === "ALL"
+                    ? "bg-purple-500 text-slate-950 shadow"
+                    : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+                }`}
+              >
+                Semua Kategori ({items.length})
+              </button>
+              {categoriesList.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategoryFilter(cat)}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
+                    selectedCategoryFilter === cat
+                      ? "bg-purple-500 text-slate-950 font-bold shadow"
+                      : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={handleAddItem}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all self-start md:self-auto"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Tambah Item Biaya</span>
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="text-[10px] uppercase text-slate-400 bg-slate-900 border-b border-slate-800">
+                <tr>
+                  <th className="px-4 py-3">No</th>
+                  <th className="px-4 py-3">Kategori</th>
+                  <th className="px-4 py-3">Nama Komponen Biaya</th>
+                  <th className="px-4 py-3 text-right">Volume / Ha</th>
+                  <th className="px-4 py-3 text-right">Total Volume ({landArea} Ha)</th>
+                  <th className="px-4 py-3 text-right">Harga Satuan (Rp)</th>
+                  <th className="px-4 py-3 text-right">Subtotal Biaya (Rp)</th>
+                  <th className="px-4 py-3 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {filteredItems.map((item, idx) => {
+                  const scaledVolume = item.qtyPerHa * landArea;
+                  const subtotal = scaledVolume * item.unitPrice;
+
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-900/40 transition-colors">
+                      <td className="px-4 py-3 text-slate-500 font-mono">{idx + 1}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] text-slate-300">
+                          {item.category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-white">
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => handleItemChange(item.id, "name", e.target.value)}
+                          className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-purple-500 focus:outline-none w-full text-xs font-semibold"
+                        />
+                        {item.notes && <p className="text-[10px] text-slate-500">{item.notes}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-slate-300">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={item.qtyPerHa}
+                          onChange={(e) => handleItemChange(item.id, "qtyPerHa", Number(e.target.value))}
+                          className="w-16 text-right bg-slate-950/60 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                        />{" "}
+                        <span className="text-[10px] text-slate-500">{item.unit}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-bold text-purple-300">
+                        {scaledVolume.toLocaleString("id-ID", { maximumFractionDigits: 1 })} {item.unit}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-slate-300">
+                        <input
+                          type="number"
+                          step="100"
+                          value={item.unitPrice}
+                          onChange={(e) => handleItemChange(item.id, "unitPrice", Number(e.target.value))}
+                          className="w-24 text-right bg-slate-950/60 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-black text-emerald-400">
+                        Rp {Math.round(subtotal).toLocaleString("id-ID")}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                          title="Hapus baris"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="border-t-2 border-slate-700 bg-slate-900/90 font-extrabold">
+                <tr>
+                  <td colSpan={6} className="px-4 py-3 text-right text-xs uppercase text-slate-300">
+                    Total Rencana Anggaran Biaya (RAB):
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm text-emerald-400 font-mono font-black">
+                    Rp {totalCost.toLocaleString("id-ID")}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
       </div>
     </div>
