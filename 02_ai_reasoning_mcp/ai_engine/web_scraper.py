@@ -21,6 +21,13 @@ from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
+from dotenv import load_dotenv
+
+# Load .env if present
+load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../.env"))
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))
+
 logger = logging.getLogger("agrisensa.web_scraper")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -85,26 +92,50 @@ class WebScraper:
 
         if self.firecrawl_client:
             try:
-                # Firecrawl API
-                res = self.firecrawl_client.scrape_url(url, params={"formats": ["markdown", "html"]})
-                md = res.get("markdown", "")
-                title = res.get("metadata", {}).get("title", "") or url
-                text = res.get("text", "") or md
-                tables = self._extract_tables_from_markdown(md) if extract_tables else []
-                prices = self._extract_prices(text)
+                # Firecrawl API (v1 / v2 / v4 compatible)
+                res = None
+                if hasattr(self.firecrawl_client, "scrape"):
+                    res = self.firecrawl_client.scrape(url, formats=["markdown", "html"])
+                elif hasattr(self.firecrawl_client, "scrape_url"):
+                    try:
+                        res = self.firecrawl_client.scrape_url(url, formats=["markdown", "html"])
+                    except TypeError:
+                        res = self.firecrawl_client.scrape_url(url, params={"formats": ["markdown", "html"]})
 
-                return ScrapeResult(
-                    url=url,
-                    title=title,
-                    markdown_content=md,
-                    text_content=text[:10000],
-                    extracted_tables=tables,
-                    prices_found=prices,
-                    metadata=res.get("metadata", {}),
-                    engine_used="firecrawl",
-                    elapsed_seconds=round(time.perf_counter() - t0, 3),
-                    timestamp=datetime.now().isoformat(),
-                )
+                if res:
+                    # Handle both object attributes (Document) and dictionary returns
+                    if hasattr(res, "markdown"):
+                        md = res.markdown or ""
+                        meta = res.metadata if hasattr(res, "metadata") else {}
+                        meta_dict = meta.__dict__ if hasattr(meta, "__dict__") else (meta if isinstance(meta, dict) else {})
+                        title = getattr(meta, "title", None) or meta_dict.get("title", "") or url
+                        text = getattr(res, "text", None) or md
+                    elif isinstance(res, dict):
+                        md = res.get("markdown", "")
+                        meta_dict = res.get("metadata", {})
+                        title = meta_dict.get("title", "") or url
+                        text = res.get("text", "") or md
+                    else:
+                        md = str(res)
+                        meta_dict = {}
+                        title = url
+                        text = md
+
+                    tables = self._extract_tables_from_markdown(md) if extract_tables else []
+                    prices = self._extract_prices(text)
+
+                    return ScrapeResult(
+                        url=url,
+                        title=str(title),
+                        markdown_content=md,
+                        text_content=text[:10000],
+                        extracted_tables=tables,
+                        prices_found=prices,
+                        metadata=meta_dict if isinstance(meta_dict, dict) else {},
+                        engine_used="firecrawl",
+                        elapsed_seconds=round(time.perf_counter() - t0, 3),
+                        timestamp=datetime.now().isoformat(),
+                    )
             except Exception as e:
                 logger.warning(f"Firecrawl scrape failed for {url}: {e}, using native fallback")
 

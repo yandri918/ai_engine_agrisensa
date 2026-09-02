@@ -12,6 +12,8 @@ import sys
 import os
 sys.path.insert(0, '.')
 os.environ['PYTHONIOENCODING'] = 'utf-8'
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 print("============================================================")
 print("[TEST] Testing AgriSensa MCP Tools...")

@@ -16,6 +16,18 @@ import {
   ChevronRight,
   ShieldCheck,
   Award,
+  Sliders,
+  Scale,
+  Cpu,
+  Activity,
+  Zap,
+  Leaf,
+  Droplets,
+  Thermometer,
+  CloudRain,
+  Flame,
+  ArrowRight,
+  Filter,
 } from "lucide-react";
 import {
   Radar,
@@ -30,30 +42,75 @@ import {
   YAxis,
   Tooltip,
   Cell,
+  CartesianGrid,
+  Legend,
 } from "recharts";
+
+interface ExtendedCropResult extends CropPredictionResult {
+  variety?: string;
+  all_crops_ranked?: Array<{
+    crop: string;
+    category: string;
+    variety: string;
+    score: number;
+    yield_potential: string;
+    fertilizer: string;
+    factor_scores: Record<string, number>;
+  }>;
+}
 
 export default function MLOpsPage() {
   const [input, setInput] = useState<CropPredictionInput>({
     nitrogen: 85,
     phosphorus: 50,
-    potassium: 45,
-    temperature: 27.0,
-    humidity: 80,
-    ph: 6.2,
-    rainfall: 210,
+    potassium: 55,
+    temperature: 26.5,
+    humidity: 78,
+    ph: 6.3,
+    rainfall: 160,
   });
 
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<CropPredictionResult | null>(null);
+  const [result, setResult] = useState<ExtendedCropResult | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>("Semua");
+  const [selectedCompareCrop, setSelectedCompareCrop] = useState<string | null>(null);
+  const [autoPredict, setAutoPredict] = useState<boolean>(true);
 
   const presets = [
-    { label: "🌾 Padi Sawah Lahan Basah", n: 85, p: 45, k: 45, ph: 6.2, rain: 220, temp: 27.5, hum: 82 },
+    { label: "🌾 Padi Sawah Irigasi", n: 85, p: 45, k: 50, ph: 6.2, rain: 220, temp: 27.5, hum: 82 },
     { label: "🌽 Jagung Lahan Kering", n: 110, p: 65, k: 60, ph: 6.5, rain: 130, temp: 28.0, hum: 65 },
-    { label: "🌶️ Cabai Dataran Rendah", n: 90, p: 75, k: 80, ph: 6.3, rain: 110, temp: 26.5, hum: 70 },
+    { label: "🌶️ Cabai Dataran Rendah", n: 90, p: 75, k: 85, ph: 6.4, rain: 120, temp: 26.5, hum: 70 },
     { label: "🧅 Bawang Merah Intensif", n: 80, p: 70, k: 70, ph: 6.4, rain: 90, temp: 29.0, hum: 60 },
-    { label: "🌴 Lahan Kelapa Sawit", n: 120, p: 50, k: 120, ph: 5.2, rain: 240, temp: 28.5, hum: 85 },
-    { label: "☕ Kopi Arabika Dataran Tinggi", n: 65, p: 35, k: 70, ph: 5.8, rain: 180, temp: 19.5, hum: 80 },
+    { label: "🍈 Melon Inthanon", n: 105, p: 65, k: 95, ph: 6.5, rain: 100, temp: 28.0, hum: 65 },
+    { label: "🥔 Kentang Dataran Tinggi", n: 90, p: 80, k: 105, ph: 5.8, rain: 160, temp: 18.5, hum: 80 },
+    { label: "☕ Kopi Arabika Specialty", n: 70, p: 40, k: 75, ph: 5.8, rain: 180, temp: 19.5, hum: 80 },
+    { label: "🌴 Kelapa Sawit Produktif", n: 120, p: 55, k: 125, ph: 5.2, rain: 240, temp: 28.5, hum: 85 },
   ];
+
+  const categories = ["Semua", "Pangan Pokok", "Hortikultura Sayur", "Buah-buahan", "Perkebunan"];
+
+  const runInference = async (dataToPredict = input) => {
+    setLoading(true);
+    try {
+      const data = await predictCrop(dataToPredict);
+      setResult(data as ExtendedCropResult);
+      if (!selectedCompareCrop && (data as any)?.all_crops_ranked?.[1]) {
+        setSelectedCompareCrop((data as any).all_crops_ranked[1].crop);
+      }
+    } catch (err) {
+      console.error("MLOps inference error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSliderChange = (field: keyof CropPredictionInput, value: number) => {
+    const updated = { ...input, [field]: value };
+    setInput(updated);
+    if (autoPredict) {
+      runInference(updated);
+    }
+  };
 
   const applyPreset = (p: (typeof presets)[0]) => {
     const newInput = {
@@ -69,74 +126,112 @@ export default function MLOpsPage() {
     runInference(newInput);
   };
 
-  const runInference = async (dataToPredict = input) => {
-    setLoading(true);
-    try {
-      const data = await predictCrop(dataToPredict);
-      setResult(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     runInference();
   }, []);
 
-  const radarData = [
-    { subject: "Nitrogen (N)", actual: (input.nitrogen / 140) * 100, ideal: 70 },
-    { subject: "Fosfat (P)", actual: (input.phosphorus / 140) * 100, ideal: 60 },
-    { subject: "Kalium (K)", actual: (input.potassium / 140) * 100, ideal: 65 },
-    { subject: "pH Tanah", actual: (input.ph / 9) * 100, ideal: 72 },
-    { subject: "Curah Hujan", actual: (input.rainfall / 300) * 100, ideal: 65 },
-    { subject: "Suhu Lingkungan", actual: (input.temperature / 40) * 100, ideal: 68 },
+  // Filter ranked crops based on selected category tab
+  const rankedList = result?.all_crops_ranked || [];
+  const filteredCrops = activeCategory === "Semua"
+    ? rankedList
+    : rankedList.filter((c) => c.category === activeCategory);
+
+  // Compare candidate crop
+  const compareCropData = rankedList.find((c) => c.crop === selectedCompareCrop) || rankedList[1] || rankedList[0];
+
+  // Multi-Commodity Radar Chart Data
+  const radarComparisonData = [
+    {
+      subject: "Nitrogen (N)",
+      "Kondisi Lahan": Math.min(100, Math.round((input.nitrogen / 140) * 100)),
+      "Juara 1 (Rekomendasi)": rankedList[0]?.factor_scores?.nitrogen || 85,
+      [compareCropData?.crop ? compareCropData.crop.split(" ")[0] : "Pembanding"]: compareCropData?.factor_scores?.nitrogen || 70,
+    },
+    {
+      subject: "Fosfor (P)",
+      "Kondisi Lahan": Math.min(100, Math.round((input.phosphorus / 100) * 100)),
+      "Juara 1 (Rekomendasi)": rankedList[0]?.factor_scores?.phosphorus || 80,
+      [compareCropData?.crop ? compareCropData.crop.split(" ")[0] : "Pembanding"]: compareCropData?.factor_scores?.phosphorus || 65,
+    },
+    {
+      subject: "Kalium (K)",
+      "Kondisi Lahan": Math.min(100, Math.round((input.potassium / 140) * 100)),
+      "Juara 1 (Rekomendasi)": rankedList[0]?.factor_scores?.potassium || 88,
+      [compareCropData?.crop ? compareCropData.crop.split(" ")[0] : "Pembanding"]: compareCropData?.factor_scores?.potassium || 72,
+    },
+    {
+      subject: "pH Tanah",
+      "Kondisi Lahan": Math.min(100, Math.round((input.ph / 8.5) * 100)),
+      "Juara 1 (Rekomendasi)": rankedList[0]?.factor_scores?.ph || 95,
+      [compareCropData?.crop ? compareCropData.crop.split(" ")[0] : "Pembanding"]: compareCropData?.factor_scores?.ph || 75,
+    },
+    {
+      subject: "Curah Hujan",
+      "Kondisi Lahan": Math.min(100, Math.round((input.rainfall / 300) * 100)),
+      "Juara 1 (Rekomendasi)": rankedList[0]?.factor_scores?.rainfall || 90,
+      [compareCropData?.crop ? compareCropData.crop.split(" ")[0] : "Pembanding"]: compareCropData?.factor_scores?.rainfall || 60,
+    },
+    {
+      subject: "Suhu Udara",
+      "Kondisi Lahan": Math.min(100, Math.round((input.temperature / 38) * 100)),
+      "Juara 1 (Rekomendasi)": rankedList[0]?.factor_scores?.temperature || 92,
+      [compareCropData?.crop ? compareCropData.crop.split(" ")[0] : "Pembanding"]: compareCropData?.factor_scores?.temperature || 80,
+    },
   ];
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl glass-panel p-6 md:p-8 border border-cyan-500/30 shadow-2xl bg-gradient-to-r from-slate-950 via-[#0a1322] to-slate-950">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+  // SHAP Feature Attribution Data
+  const shapChartData = (result?.shap_factors || []).map((f) => ({
+    name: f.factor,
+    impact: Math.round(f.impact * 100),
+    fill: f.impact >= 0.2 ? "#10b981" : f.impact >= 0.15 ? "#38bdf8" : "#f59e0b",
+  }));
 
+  return (
+    <div className="space-y-8 pb-16 text-slate-100">
+      {/* Header Banner */}
+      <div className="relative overflow-hidden rounded-2xl p-6 md:p-8 border border-cyan-500/30 shadow-2xl bg-gradient-to-r from-slate-950 via-[#0a1426] to-slate-950 backdrop-blur-xl">
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-bold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold tracking-wide uppercase">
               <FlaskConical className="w-3.5 h-3.5" />
-              <span>Machine Learning Crop Recommendation Model</span>
+              MLOps Inference Engine & Multi-Commodity Classifier
             </div>
-            <h1 className="text-2xl md:text-4xl font-extrabold text-white font-['Plus_Jakarta_Sans'] tracking-tight">
-              Laboratorium <span className="text-cyan-400">MLOps & Sensor Tanah</span>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+              Laboratorium AI & Komparasi Multi-Komoditas
             </h1>
-            <p className="text-xs md:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Algoritma klasifikasi presisi multi-parameter yang menghitung kecocokan komoditas, dosis pupuk baku Balitbangtan, dan analisis kontribusi SHAP.
+            <p className="text-slate-400 text-sm max-w-2xl">
+              Uji kesesuaian lahan secara real-time terhadap 16+ komoditas pertanian nasional menggunakan ensemble model (LightGBM, XGBoost, CatBoost) dengan fitur Explainable AI (SHAP).
             </p>
           </div>
 
-          <button
-            onClick={() => runInference()}
-            disabled={loading}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-400 hover:opacity-90 text-slate-950 font-bold text-sm shadow-xl shadow-cyan-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] w-fit shrink-0"
-          >
-            <Sparkles className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            <span>{loading ? "Menghitung Model..." : "Jalankan Prediksi Ulang"}</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Model v2.4 (Ensemble)</span>
+            </div>
+            <button
+              onClick={() => runInference(input)}
+              disabled={loading}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            >
+              <RotateCcw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              <span>{loading ? "Menganalisis..." : "Jalankan Inferensi"}</span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Preset Buttons */}
-      <div className="space-y-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-          <Layers className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Pilih Profil Tanah Cepat (1-Klik):</span>
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        {/* Quick Presets */}
+        <div className="mt-6 pt-5 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-slate-400 mr-2 flex items-center gap-1.5">
+            <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+            Preset Profil Lahan Cepat:
+          </span>
           {presets.map((p) => (
             <button
               key={p.label}
               onClick={() => applyPreset(p)}
-              className="px-3 py-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-950/40 border border-slate-800 hover:border-cyan-500/40 text-xs font-semibold text-slate-300 hover:text-cyan-300 transition-all text-left truncate shadow-sm"
+              className="text-xs px-3 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 font-medium transition-all"
             >
               {p.label}
             </button>
@@ -144,247 +239,389 @@ export default function MLOpsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Form Inputs (6 Cols) */}
-        <div className="lg:col-span-6 glass-panel p-6 rounded-3xl border border-slate-800 space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Sprout className="w-4 h-4 text-emerald-400" />
-              <span>Input Parameter Fisik & Kimia Tanah</span>
-            </h2>
-            <button
-              onClick={() => applyPreset(presets[0])}
-              className="text-[11px] text-slate-400 hover:text-cyan-400 flex items-center gap-1 transition-colors"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Reset</span>
-            </button>
-          </div>
+      {/* Main Interactive Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column: Interactive Multi-Parameter Sliders (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="rounded-2xl bg-[#090e18] border border-slate-800 p-6 shadow-xl space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-cyan-400" />
+                <h3 className="font-bold text-white text-base">Parameter Tanah & Iklim Lahan</h3>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-400 select-none">
+                <input
+                  type="checkbox"
+                  checked={autoPredict}
+                  onChange={(e) => setAutoPredict(e.target.checked)}
+                  className="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-0 w-3.5 h-3.5"
+                />
+                <span>Auto-Inferensi</span>
+              </label>
+            </div>
 
-          <div className="space-y-4 text-xs">
-            {/* Nitrogen */}
-            <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="font-semibold text-slate-200">Kadar Nitrogen (N) Tanah</label>
-                <span className="font-mono text-emerald-400 font-bold text-sm bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-500/30">
-                  {input.nitrogen} mg/kg
+            {/* Slider 1: Nitrogen */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-rose-400" /> Nitrogen (N)
                 </span>
+                <span className="font-mono font-bold text-emerald-400">{input.nitrogen} mg/kg</span>
               </div>
               <input
                 type="range"
-                min="10"
+                min="0"
                 max="140"
                 value={input.nitrogen}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  setInput({ ...input, nitrogen: val });
-                }}
-                onMouseUp={() => runInference()}
+                onChange={(e) => handleSliderChange("nitrogen", Number(e.target.value))}
                 className="w-full accent-emerald-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
               />
-            </div>
-
-            {/* Phosphorus & Potassium */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="font-semibold text-slate-200">Fosfat (P₂O₅)</label>
-                  <span className="font-mono text-cyan-400 font-bold text-sm bg-cyan-950/40 px-2 py-0.5 rounded-lg border border-cyan-500/30">
-                    {input.phosphorus} mg/kg
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="10"
-                  max="145"
-                  value={input.phosphorus}
-                  onChange={(e) => setInput({ ...input, phosphorus: Number(e.target.value) })}
-                  onMouseUp={() => runInference()}
-                  className="w-full accent-cyan-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
-                />
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="font-semibold text-slate-200">Kalium (K₂O)</label>
-                  <span className="font-mono text-purple-400 font-bold text-sm bg-purple-950/40 px-2 py-0.5 rounded-lg border border-purple-500/30">
-                    {input.potassium} mg/kg
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="10"
-                  max="160"
-                  value={input.potassium}
-                  onChange={(e) => setInput({ ...input, potassium: Number(e.target.value) })}
-                  onMouseUp={() => runInference()}
-                  className="w-full accent-purple-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
-                />
+              <div className="flex justify-between text-[10px] text-slate-500">
+                <span>0 (Defisit)</span>
+                <span>70-100 (Optimal)</span>
+                <span>140 (Tinggi)</span>
               </div>
             </div>
 
-            {/* pH & Rainfall */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="font-semibold text-slate-200">Derajat Keasaman (pH)</label>
-                  <span className="font-mono text-amber-400 font-bold text-sm bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-500/30">
-                    {input.ph}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="4.0"
-                  max="8.5"
-                  step="0.1"
-                  value={input.ph}
-                  onChange={(e) => setInput({ ...input, ph: Number(e.target.value) })}
-                  onMouseUp={() => runInference()}
-                  className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
-                />
+            {/* Slider 2: Phosphorus */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-amber-400" /> Fosfor (P)
+                </span>
+                <span className="font-mono font-bold text-amber-400">{input.phosphorus} mg/kg</span>
               </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="font-semibold text-slate-200">Curah Hujan (Rainfall)</label>
-                  <span className="font-mono text-blue-400 font-bold text-sm bg-blue-950/40 px-2 py-0.5 rounded-lg border border-blue-500/30">
-                    {input.rainfall} mm
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="40"
-                  max="320"
-                  value={input.rainfall}
-                  onChange={(e) => setInput({ ...input, rainfall: Number(e.target.value) })}
-                  onMouseUp={() => runInference()}
-                  className="w-full accent-blue-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
-                />
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={input.phosphorus}
+                onChange={(e) => handleSliderChange("phosphorus", Number(e.target.value))}
+                className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500">
+                <span>0</span>
+                <span>45-75 (Optimal)</span>
+                <span>100</span>
               </div>
             </div>
 
-            {/* Temperature & Humidity */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="font-semibold text-slate-200">Suhu Udara Rerata</label>
-                  <span className="font-mono text-rose-400 font-bold text-sm bg-rose-950/40 px-2 py-0.5 rounded-lg border border-rose-500/30">
-                    {input.temperature} °C
-                  </span>
+            {/* Slider 3: Potassium */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Leaf className="w-3.5 h-3.5 text-teal-400" /> Kalium (K)
+                </span>
+                <span className="font-mono font-bold text-teal-400">{input.potassium} mg/kg</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="140"
+                value={input.potassium}
+                onChange={(e) => handleSliderChange("potassium", Number(e.target.value))}
+                className="w-full accent-teal-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500">
+                <span>0</span>
+                <span>50-90 (Optimal)</span>
+                <span>140</span>
+              </div>
+            </div>
+
+            {/* Slider 4: pH */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-purple-400" /> Derajat Keasaman (pH)
+                </span>
+                <span className="font-mono font-bold text-purple-400">{input.ph}</span>
+              </div>
+              <input
+                type="range"
+                min="4.0"
+                max="8.5"
+                step="0.1"
+                value={input.ph}
+                onChange={(e) => handleSliderChange("ph", Number(e.target.value))}
+                className="w-full accent-purple-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500">
+                <span>4.0 (Asam)</span>
+                <span>6.0-6.8 (Ideal)</span>
+                <span>8.5 (Alkali)</span>
+              </div>
+            </div>
+
+            {/* Slider 5: Rainfall */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <CloudRain className="w-3.5 h-3.5 text-sky-400" /> Curah Hujan Bulanan
+                </span>
+                <span className="font-mono font-bold text-sky-400">{input.rainfall} mm</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="350"
+                value={input.rainfall}
+                onChange={(e) => handleSliderChange("rainfall", Number(e.target.value))}
+                className="w-full accent-sky-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500">
+                <span>0 (Kering)</span>
+                <span>120-200 (Sedang)</span>
+                <span>350 (Basah)</span>
+              </div>
+            </div>
+
+            {/* Slider 6 & 7: Temperature & Humidity in 2 cols */}
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-300">Suhu (°C)</span>
+                  <span className="font-mono font-bold text-rose-400">{input.temperature}°C</span>
                 </div>
                 <input
                   type="range"
-                  min="14"
+                  min="15"
                   max="38"
                   step="0.5"
                   value={input.temperature}
-                  onChange={(e) => setInput({ ...input, temperature: Number(e.target.value) })}
-                  onMouseUp={() => runInference()}
+                  onChange={(e) => handleSliderChange("temperature", Number(e.target.value))}
                   className="w-full accent-rose-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
                 />
               </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="font-semibold text-slate-200">Kelembaban Relatif (RH)</label>
-                  <span className="font-mono text-teal-400 font-bold text-sm bg-teal-950/40 px-2 py-0.5 rounded-lg border border-teal-500/30">
-                    {input.humidity} %
-                  </span>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-300">Kelembaban (%)</span>
+                  <span className="font-mono font-bold text-cyan-400">{input.humidity}%</span>
                 </div>
                 <input
                   type="range"
                   min="30"
-                  max="98"
+                  max="100"
                   value={input.humidity}
-                  onChange={(e) => setInput({ ...input, humidity: Number(e.target.value) })}
-                  onMouseUp={() => runInference()}
-                  className="w-full accent-teal-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
+                  onChange={(e) => handleSliderChange("humidity", Number(e.target.value))}
+                  className="w-full accent-cyan-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
                 />
               </div>
             </div>
           </div>
+
+          {/* Soil Status & Prescription Advice Card */}
+          {result && (
+            <div className="rounded-2xl bg-[#090e18] border border-emerald-500/30 p-5 shadow-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4" /> Diagnostik & Remediasi Lahan
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                  {result.soil_status.ph_category}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {result.soil_status.actionable_advice}
+              </p>
+              <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between">
+                <span>Keseimbangan NPK: <strong className="text-emerald-400">{result.soil_status.npk_balance.toUpperCase()}</strong></span>
+                <span>pH Target: <strong className="text-white">6.2 - 6.8</strong></span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Results Panel with Radar Chart (6 Cols) */}
-        <div className="lg:col-span-6 space-y-6">
+        {/* Right Column: Multi-Commodity Ranking & Comparison Matrix (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Top Recommendation Winner Card */}
           {result && (
-            <div className="glass-panel p-6 rounded-3xl border border-cyan-500/30 space-y-6 bg-gradient-to-b from-[#0c1524] to-[#070d17] shadow-2xl">
-              {/* Winner Header */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-400 flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5" />
-                    Rekomendasi Utama (Confidence {(result.confidence * 100).toFixed(0)}%)
+            <div className="relative rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-950 border border-emerald-500/40 p-6 shadow-2xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-36 h-36 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500 text-slate-950 shadow-sm">
+                    <Award className="w-3.5 h-3.5" /> REKOMENDASI JUARA 1 (OPTIMAL)
                   </span>
-                  <h3 className="text-xl md:text-2xl font-black text-white font-['Plus_Jakarta_Sans'] text-emerald-300 mt-1">
+                  <h2 className="text-2xl font-extrabold text-white mt-1">
                     {result.recommended_crop}
-                  </h3>
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Varietas Rekomendasi: <strong className="text-slate-200">{result.variety || "Unggul Nasional"}</strong>
+                  </p>
                 </div>
-
-                <div className="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-right">
-                  <span className="text-[10px] font-bold block uppercase text-slate-400">Potensi Panen</span>
-                  <span className="text-sm font-black font-['Outfit']">{result.yield_potential || "6.8 Ton/Ha"}</span>
-                </div>
-              </div>
-
-              {/* Radar Chart: Soil Balance vs Optimal */}
-              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-300">Radar Keseimbangan Hara & Iklim</span>
-                  <div className="flex items-center gap-3 text-[10px]">
-                    <span className="flex items-center gap-1 text-cyan-400 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span> Kondisi Aktual
-                    </span>
-                    <span className="flex items-center gap-1 text-slate-500">
-                      <span className="w-2 h-2 rounded-full bg-slate-600 inline-block"></span> Standar Optimal
-                    </span>
-                  </div>
-                </div>
-
-                <div className="h-56 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
-                      <PolarGrid stroke="#1e293b" />
-                      <PolarAngleAxis dataKey="subject" stroke="#94a3b8" tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#334155" tick={false} />
-                      <Radar name="Aktual" dataKey="actual" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.4} />
-                      <Radar name="Ideal" dataKey="ideal" stroke="#64748b" fill="#64748b" fillOpacity={0.1} />
-                    </RadarChart>
-                  </ResponsiveContainer>
+                <div className="text-right">
+                  <span className="text-3xl font-extrabold text-emerald-400">{result.confidence}%</span>
+                  <p className="text-[10px] text-slate-400 uppercase font-semibold">Skor Kecocokan</p>
                 </div>
               </div>
 
-              {/* Dosis Pupuk & Tindakan Ilmiah */}
-              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2.5 text-xs">
-                <div className="flex items-center gap-1.5 font-bold text-cyan-300">
-                  <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                  <span>Rekomendasi Paket Pemupukan Presisi:</span>
+              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-800/80 text-xs">
+                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Potensi Hasil Panen</p>
+                  <p className="font-bold text-white mt-0.5">{result.yield_potential || "12 - 18 Ton/Ha"}</p>
                 </div>
-                <p className="text-slate-200 leading-relaxed font-mono text-[11px] bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  {result.fertilizer_recommendation || "Urea 250 kg/ha + NPK 15-15-15 300 kg/ha + SP-36 100 kg/ha"}
-                </p>
-                <p className="text-slate-300 leading-relaxed text-[11px] pt-1">
-                  💡 <strong>Koreksi Tanah:</strong> {result.soil_status.actionable_advice}
-                </p>
-              </div>
-
-              {/* SHAP Decision Factors */}
-              <div className="space-y-2 text-xs">
-                <span className="font-bold text-slate-300">Explainability Factors (Interpretasi Nilai SHAP):</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {result.shap_factors.map((f) => (
-                    <div key={f.factor} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                      <div className="flex justify-between font-semibold text-slate-200">
-                        <span>{f.factor.split(" (")[0]}</span>
-                        <span className="text-cyan-400 font-mono">{(f.impact * 100).toFixed(0)}%</span>
-                      </div>
-                      <p className="text-[10px] text-slate-400 leading-relaxed line-clamp-2">{f.interpretation}</p>
-                    </div>
-                  ))}
+                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Rencana Pemupukan Spesifik</p>
+                  <p className="font-medium text-emerald-300 mt-0.5 line-clamp-2">{result.fertilizer_recommendation || "NPK Berimbang + Dolomit"}</p>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Multi-Commodity Category Filter & Comparison List */}
+          <div className="rounded-2xl bg-[#090e18] border border-slate-800 p-6 shadow-xl space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-cyan-400" />
+                <h3 className="font-bold text-white text-base">Matriks Kecocokan Multi-Komoditas</h3>
+              </div>
+
+              {/* Category Filter Chips */}
+              <div className="flex flex-wrap gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                      activeCategory === cat ? "bg-cyan-500 text-slate-950 font-bold shadow" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ranked Crops Progress List */}
+            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+              {filteredCrops.map((crop, idx) => {
+                const isSelectedForCompare = selectedCompareCrop === crop.crop;
+                const isTopWinner = idx === 0 && activeCategory === "Semua";
+
+                return (
+                  <div
+                    key={crop.crop}
+                    onClick={() => setSelectedCompareCrop(crop.crop)}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-4 ${
+                      isSelectedForCompare
+                        ? "bg-cyan-950/40 border-cyan-500 shadow-md"
+                        : isTopWinner
+                        ? "bg-emerald-950/30 border-emerald-500/50"
+                        : "bg-slate-900/40 border-slate-800/80 hover:bg-slate-900/80 hover:border-slate-700"
+                    }`}
+                  >
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-400 w-4">#{idx + 1}</span>
+                        <h4 className="text-sm font-bold text-white truncate">{crop.crop}</h4>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                          {crop.category}
+                        </span>
+                      </div>
+
+                      {/* Suitability Progress Bar */}
+                      <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800/60">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            crop.score >= 85
+                              ? "bg-gradient-to-r from-emerald-500 to-teal-400"
+                              : crop.score >= 70
+                              ? "bg-gradient-to-r from-cyan-500 to-blue-400"
+                              : "bg-gradient-to-r from-amber-500 to-rose-400"
+                          }`}
+                          style={{ width: `${crop.score}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span
+                        className={`text-sm font-extrabold ${
+                          crop.score >= 85 ? "text-emerald-400" : crop.score >= 70 ? "text-cyan-400" : "text-amber-400"
+                        }`}
+                      >
+                        {crop.score}%
+                      </span>
+                      <p className="text-[10px] text-slate-500">
+                        {isSelectedForCompare ? "✓ Terpilih di Radar" : "Klik Bandingkan"}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Multi-Commodity Head-to-Head Radar Comparison */}
+          <div className="rounded-2xl bg-[#090e18] border border-slate-800 p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Scale className="w-4 h-4 text-cyan-400" />
+                <h3 className="font-bold text-white text-base">Head-to-Head Radar Kesesuaian Lahan</h3>
+              </div>
+              <span className="text-xs text-cyan-300 font-mono">
+                Bandingkan: <strong>{rankedList[0]?.crop.split(" ")[0]}</strong> vs{" "}
+                <strong>{compareCropData?.crop.split(" ")[0]}</strong>
+              </span>
+            </div>
+
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarComparisonData}>
+                  <PolarGrid stroke="#1e293b" />
+                  <PolarAngleAxis dataKey="subject" stroke="#94a3b8" tick={{ fill: "#cbd5e1", fontSize: 11 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#334155" />
+                  <Radar name="Kondisi Lahan" dataKey="Kondisi Lahan" stroke="#38bdf8" fill="#38bdf8" fillOpacity={0.25} />
+                  <Radar name="Juara 1 (Rekomendasi)" dataKey="Juara 1 (Rekomendasi)" stroke="#10b981" fill="#10b981" fillOpacity={0.35} />
+                  {compareCropData?.crop && (
+                    <Radar
+                      name={compareCropData.crop.split(" ")[0]}
+                      dataKey={compareCropData.crop.split(" ")[0]}
+                      stroke="#f59e0b"
+                      fill="#f59e0b"
+                      fillOpacity={0.2}
+                    />
+                  )}
+                  <Tooltip contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: 8, color: "#fff" }} />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Explainable AI (SHAP Feature Importance) */}
+          <div className="rounded-2xl bg-[#090e18] border border-slate-800 p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
+              <Cpu className="w-4 h-4 text-emerald-400" />
+              <h3 className="font-bold text-white text-base">Explainable AI (SHAP Factor Attribution)</h3>
+            </div>
+
+            <div className="h-44 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={shapChartData} layout="vertical" margin={{ left: 20, right: 20, top: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis type="number" stroke="#64748b" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" stroke="#64748b" tick={{ fill: "#cbd5e1", fontSize: 11 }} />
+                  <Tooltip contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: 8, color: "#fff" }} formatter={(v: any) => [`${v}%`, "Kontribusi Bobot"]} />
+                  <Bar dataKey="impact" radius={[0, 4, 4, 0]}>
+                    {shapChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-slate-800/80">
+              {result?.shap_factors?.map((f, i) => (
+                <div key={i} className="text-xs text-slate-300 flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">•</span>
+                  <span>{f.interpretation}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

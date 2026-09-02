@@ -9,6 +9,7 @@ Menyediakan generator grafik standar industri dalam format:
 from typing import Dict, Any, List, Optional
 import json
 import logging
+import math
 
 logger = logging.getLogger("agrisensa.chart_engine")
 
@@ -252,14 +253,333 @@ class ChartEngine:
         }
 
     # =========================================================================
-    # 5. DISPATCHER / GENERIC ROUTER FOR MCP
+    # 5. EXECUTIVE MULTI-DOMAIN RADAR SCORECARD
+    # =========================================================================
+    def generate_executive_radar_scorecard(self, agronomic: float, market: float, financial: float, climate_safety: float, esg: float, format: str = "echarts") -> Dict[str, Any]:
+        """Radar scorecard komprehensif 5 pilar analitik."""
+        indicators = ["Kesehatan Agronomi", "Peluang Pasar", "Ketahanan Finansial", "Keamanan Iklim", "Kinerja ESG/Karbon"]
+        values = [agronomic, market, financial, climate_safety, esg]
+
+        if format.lower() == "plotly":
+            return {
+                "format": "plotly",
+                "chart_type": "radar_scorecard",
+                "data": [{
+                    "type": "scatterpolar",
+                    "r": values + [values[0]],
+                    "theta": indicators + [indicators[0]],
+                    "fill": "toself",
+                    "name": "Skor Eksekutif AgriSensa",
+                    "line": {"color": "#10b981", "width": 2.5}
+                }],
+                "layout": {
+                    "polar": {"radialaxis": {"visible": True, "range": [0, 100]}},
+                    "title": "Scorecard Kesehatan & Kelayakan Multi-Domain",
+                    "showlegend": False
+                }
+            }
+
+        return {
+            "format": "echarts",
+            "chart_type": "radar_scorecard",
+            "option": {
+                "title": {"text": "Scorecard Kelayakan Multi-Domain AgriSensa", "left": "center"},
+                "tooltip": {"trigger": "item"},
+                "radar": {
+                    "indicator": [
+                        {"name": f"Agronomi ({agronomic})", "max": 100},
+                        {"name": f"Pasar ({market})", "max": 100},
+                        {"name": f"Finansial ({financial})", "max": 100},
+                        {"name": f"Keamanan Iklim ({climate_safety})", "max": 100},
+                        {"name": f"ESG / Karbon ({esg})", "max": 100}
+                    ],
+                    "shape": "polygon",
+                    "splitArea": {"show": True}
+                },
+                "series": [{
+                    "name": "Skor Proyek",
+                    "type": "radar",
+                    "data": [{
+                        "value": values,
+                        "name": "Performa Aktual Proyek",
+                        "areaStyle": {"color": "rgba(16, 185, 129, 0.4)"},
+                        "lineStyle": {"color": "#10b981", "width": 2.5}
+                    }]
+                }]
+            }
+        }
+
+    # =========================================================================
+    # 6. DUAL-AXIS PRICE & WEATHER ANOMALY CORRELATION
+    # =========================================================================
+    def generate_price_weather_correlation(self, commodity: str, dates: List[str], prices: List[float], forecast_prices: List[float], rainfall_mm: List[float], format: str = "echarts") -> Dict[str, Any]:
+        """Grafik dual-axis korelasi curah hujan vs tren harga komoditas."""
+        all_prices = prices + forecast_prices
+        
+        if format.lower() == "plotly":
+            return {
+                "format": "plotly",
+                "chart_type": "dual_axis_correlation",
+                "data": [
+                    {
+                        "x": dates[:len(rainfall_mm)],
+                        "y": rainfall_mm,
+                        "name": "Curah Hujan (mm)",
+                        "type": "bar",
+                        "marker": {"color": "rgba(59, 130, 246, 0.45)"},
+                        "yaxis": "y2"
+                    },
+                    {
+                        "x": dates[:len(prices)],
+                        "y": prices,
+                        "name": "Harga Historis",
+                        "type": "scatter",
+                        "mode": "lines+markers",
+                        "line": {"color": "#16a34a", "width": 3}
+                    },
+                    {
+                        "x": dates[len(prices)-1:len(all_prices)],
+                        "y": [prices[-1]] + forecast_prices,
+                        "name": "Proyeksi AI",
+                        "type": "scatter",
+                        "mode": "lines+markers",
+                        "line": {"color": "#f59e0b", "width": 3, "dash": "dash"}
+                    }
+                ],
+                "layout": {
+                    "title": f"Korelasi Curah Hujan vs Tren Harga ({commodity})",
+                    "yaxis": {"title": "Harga (Rp/kg)"},
+                    "yaxis2": {"title": "Curah Hujan (mm)", "overlaying": "y", "side": "right"}
+                }
+            }
+
+        return {
+            "format": "echarts",
+            "chart_type": "dual_axis_correlation",
+            "option": {
+                "title": {"text": f"Korelasi Curah Hujan & Dinamika Harga ({commodity})", "left": "center"},
+                "tooltip": {"trigger": "axis", "axisPointer": {"type": "cross"}},
+                "legend": {"top": "bottom"},
+                "xAxis": {"type": "category", "data": dates},
+                "yAxis": [
+                    {"type": "value", "name": "Harga (Rp/kg)", "axisLabel": {"formatter": "Rp {value}"}},
+                    {"type": "value", "name": "Hujan (mm)", "axisLabel": {"formatter": "{value} mm"}}
+                ],
+                "series": [
+                    {
+                        "name": "Curah Hujan (mm)",
+                        "type": "bar",
+                        "yAxisIndex": 1,
+                        "data": rainfall_mm,
+                        "itemStyle": {"color": "rgba(59, 130, 246, 0.5)"}
+                    },
+                    {
+                        "name": "Harga Historis",
+                        "type": "line",
+                        "smooth": True,
+                        "data": prices,
+                        "itemStyle": {"color": "#16a34a"},
+                        "lineStyle": {"width": 3}
+                    },
+                    {
+                        "name": "Proyeksi AI",
+                        "type": "line",
+                        "smooth": True,
+                        "data": [None] * (len(prices) - 1) + [prices[-1]] + forecast_prices,
+                        "lineStyle": {"type": "dashed", "width": 3, "color": "#f59e0b"},
+                        "itemStyle": {"color": "#f59e0b"}
+                    }
+                ]
+            }
+        }
+
+    # =========================================================================
+    # 7. MONTE CARLO PROBABILITY DENSITY & RISK VALUE (VaR 95%)
+    # =========================================================================
+    def generate_monte_carlo_distribution(self, mean_profit: float, var_95: float, prob_profit: float, format: str = "echarts") -> Dict[str, Any]:
+        """Kurva distribusi probabilitas laba & ambang risiko VaR 95%."""
+        sigma = abs(mean_profit - var_95) / 1.645 if mean_profit != var_95 else (mean_profit * 0.25)
+        x_pts = []
+        y_pts = []
+        for i in range(-30, 31):
+            x = mean_profit + (i / 10.0) * sigma
+            y = (1.0 / (sigma * math.sqrt(2 * math.pi))) * math.exp(-0.5 * ((x - mean_profit) / sigma) ** 2)
+            x_pts.append(round(x, 0))
+            y_pts.append(round(y * 1000000, 4))
+
+        if format.lower() == "plotly":
+            return {
+                "format": "plotly",
+                "chart_type": "monte_carlo_density",
+                "data": [{
+                    "x": x_pts,
+                    "y": y_pts,
+                    "type": "scatter",
+                    "mode": "lines",
+                    "fill": "tozeroy",
+                    "name": f"Distribusi Laba (P(Untung)={prob_profit}%)",
+                    "line": {"color": "#3b82f6"}
+                }],
+                "layout": {
+                    "title": f"Simulasi Risiko Monte Carlo 10k (VaR 95%: Rp {var_95:,.0f})",
+                    "xaxis": {"title": "Estimasi Laba Bersih (Rp)"},
+                    "yaxis": {"title": "Kerapatan Probabilitas"}
+                }
+            }
+
+        return {
+            "format": "echarts",
+            "chart_type": "monte_carlo_density",
+            "option": {
+                "title": {"text": f"Distribusi Risiko Monte Carlo (Probabilitas Untung: {prob_profit}%)", "subtext": f"Batas Aman VaR 95%: Rp {var_95:,.0f}", "left": "center"},
+                "tooltip": {"trigger": "axis"},
+                "xAxis": {"type": "category", "data": [f"Rp {int(x/1000000)}M" if abs(x) >= 1000000 else f"Rp {int(x/1000)}k" for x in x_pts]},
+                "yAxis": {"type": "value", "name": "Probabilitas Relatif"},
+                "series": [{
+                    "name": "Kerapatan Laba",
+                    "type": "line",
+                    "smooth": True,
+                    "areaStyle": {"color": "rgba(59, 130, 246, 0.35)"},
+                    "lineStyle": {"color": "#3b82f6", "width": 2.5},
+                    "data": y_pts
+                }]
+            }
+        }
+
+    # =========================================================================
+    # 8. FINANCIAL WATERFALL (BIAYA, PENDAPATAN & LABA)
+    # =========================================================================
+    def generate_financial_waterfall(self, biaya_operasional: float, pendapatan_kotor: float, laba_bersih: float, format: str = "echarts") -> Dict[str, Any]:
+        """Visualisasi dekomposisi finansial waterfall."""
+        categories = ["Pendapatan Kotor", "Biaya Operasional", "Laba Bersih"]
+        
+        if format.lower() == "plotly":
+            return {
+                "format": "plotly",
+                "chart_type": "waterfall",
+                "data": [{
+                    "type": "waterfall",
+                    "x": categories,
+                    "y": [pendapatan_kotor, -biaya_operasional, laba_bersih],
+                    "measure": ["relative", "relative", "total"],
+                    "connector": {"line": {"color": "rgb(63, 63, 63)"}}
+                }],
+                "layout": {"title": "Dekomposisi Finansial & Margin Keuntungan"}
+            }
+
+        return {
+            "format": "echarts",
+            "chart_type": "waterfall",
+            "option": {
+                "title": {"text": "Dekomposisi Arus Kas & Profitabilitas", "left": "center"},
+                "tooltip": {"trigger": "axis"},
+                "xAxis": {"type": "category", "data": categories},
+                "yAxis": {"type": "value", "axisLabel": {"formatter": "Rp {value}"}},
+                "series": [{
+                    "type": "bar",
+                    "data": [
+                        {"value": pendapatan_kotor, "itemStyle": {"color": "#3b82f6"}},
+                        {"value": biaya_operasional, "itemStyle": {"color": "#ef4444"}},
+                        {"value": laba_bersih, "itemStyle": {"color": "#16a34a"}}
+                    ],
+                    "label": {"show": True, "position": "top"}
+                }]
+            }
+        }
+
+    # =========================================================================
+    # 9. CARBON & ESG DONUT BREAKDOWN
+    # =========================================================================
+    def generate_carbon_donut(self, emisi_pupuk: float, emisi_energi: float, emisi_lahan: float, format: str = "echarts") -> Dict[str, Any]:
+        """Breakdown emisi gas rumah kaca pertanian."""
+        data_items = [
+            {"name": "Emisi Pupuk Kimia (N2O/CO2)", "value": round(emisi_pupuk, 1)},
+            {"name": "Emisi Bahan Bakar & Mesin", "value": round(emisi_energi, 1)},
+            {"name": "Emisi Olah Tanah & Irigasi", "value": round(emisi_lahan, 1)}
+        ]
+
+        if format.lower() == "plotly":
+            return {
+                "format": "plotly",
+                "chart_type": "donut",
+                "data": [{
+                    "labels": [d["name"] for d in data_items],
+                    "values": [d["value"] for d in data_items],
+                    "type": "pie",
+                    "hole": 0.45,
+                    "marker": {"colors": ["#ef4444", "#f59e0b", "#10b981"]}
+                }],
+                "layout": {"title": "Breakdown Jejak Emisi Karbon (kg CO₂e)"}
+            }
+
+        return {
+            "format": "echarts",
+            "chart_type": "donut",
+            "option": {
+                "title": {"text": "Komposisi Jejak Emisi Karbon (kg CO₂e)", "left": "center"},
+                "tooltip": {"trigger": "item", "formatter": "{b}: {c} kg ({d}%)"},
+                "legend": {"top": "bottom"},
+                "series": [{
+                    "name": "Sumber Emisi",
+                    "type": "pie",
+                    "radius": ["40%", "70%"],
+                    "data": [
+                        {"name": "Pupuk Kimia", "value": round(emisi_pupuk, 1), "itemStyle": {"color": "#ef4444"}},
+                        {"name": "Mesin & Bahan Bakar", "value": round(emisi_energi, 1), "itemStyle": {"color": "#f59e0b"}},
+                        {"name": "Olah Tanah & Irigasi", "value": round(emisi_lahan, 1), "itemStyle": {"color": "#10b981"}}
+                    ]
+                }]
+            }
+        }
+
+    # =========================================================================
+    # 10. DISPATCHER / GENERIC ROUTER FOR MCP
     # =========================================================================
     def generate_chart(self, chart_type: str, payload: Dict[str, Any], format: str = "echarts") -> Dict[str, Any]:
         """Entry point umum untuk MCP chart generator."""
         fmt = payload.get("format", format)
         chart_type = chart_type.lower()
 
-        if "soil" in chart_type or "npk" in chart_type or "radar" in chart_type:
+        if "scorecard" in chart_type or "executive_radar" in chart_type:
+            return self.generate_executive_radar_scorecard(
+                agronomic=float(payload.get("agronomic", 85.0)),
+                market=float(payload.get("market", 80.0)),
+                financial=float(payload.get("financial", 90.0)),
+                climate_safety=float(payload.get("climate_safety", 75.0)),
+                esg=float(payload.get("esg", 88.0)),
+                format=fmt
+            )
+        elif "correlation" in chart_type or "weather_price" in chart_type:
+            return self.generate_price_weather_correlation(
+                commodity=payload.get("commodity", "Cabai"),
+                dates=payload.get("dates", ["W1", "W2", "W3", "W4", "W5", "W6"]),
+                prices=payload.get("prices", [30000, 32000, 31000, 34000, 36000]),
+                forecast_prices=payload.get("forecast_prices", [38000]),
+                rainfall_mm=payload.get("rainfall_mm", [40, 50, 70, 90, 110, 80]),
+                format=fmt
+            )
+        elif "monte_carlo" in chart_type or "distribution" in chart_type:
+            return self.generate_monte_carlo_distribution(
+                mean_profit=float(payload.get("mean_profit", 150000000)),
+                var_95=float(payload.get("var_95", 85000000)),
+                prob_profit=float(payload.get("prob_profit", 92.5)),
+                format=fmt
+            )
+        elif "waterfall" in chart_type:
+            return self.generate_financial_waterfall(
+                biaya_operasional=float(payload.get("biaya_operasional", 40000000)),
+                pendapatan_kotor=float(payload.get("pendapatan_kotor", 180000000)),
+                laba_bersih=float(payload.get("laba_bersih", 140000000)),
+                format=fmt
+            )
+        elif "carbon" in chart_type or "donut" in chart_type:
+            return self.generate_carbon_donut(
+                emisi_pupuk=float(payload.get("emisi_pupuk", 800)),
+                emisi_energi=float(payload.get("emisi_energi", 250)),
+                emisi_lahan=float(payload.get("emisi_lahan", 180)),
+                format=fmt
+            )
+        elif "soil" in chart_type or "npk" in chart_type or "radar" in chart_type:
             return self.generate_soil_radar(
                 n=float(payload.get("n", payload.get("nitrogen", 90))),
                 p=float(payload.get("p", payload.get("phosphorus", 40))),
@@ -296,5 +616,5 @@ class ChartEngine:
                 format=fmt
             )
         else:
-            # Fallback to soil radar
-            return self.generate_soil_radar(90, 40, 50, 6.5, 70, format=fmt)
+            return self.generate_executive_radar_scorecard(85, 80, 90, 75, 88, format=fmt)
+

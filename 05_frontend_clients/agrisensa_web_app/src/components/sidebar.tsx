@@ -13,6 +13,8 @@ import {
   Leaf,
   ExternalLink,
   Cpu,
+  Sparkles,
+  Beaker,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -20,8 +22,10 @@ export function Sidebar() {
 
   const navigation = [
     { name: "Command Center", href: "/", icon: LayoutDashboard },
-    { name: "Asisten AI Agronomi", href: "/chat", icon: MessageSquareCode, badge: "DeepSeek" },
+    { name: "Data Analyst Eksekutif", href: "/analyst", icon: Sparkles, badge: "AI Strategic" },
+    { name: "Laboratorium Pupuk", href: "/fertilizer", icon: Beaker, badge: "Organik & NPK" },
     { name: "Laboratorium MLOps", href: "/mlops", icon: FlaskConical, badge: "Port 8000" },
+    { name: "Asisten AI Agronomi", href: "/chat", icon: MessageSquareCode, badge: "DeepSeek" },
     { name: "Simulasi Monte Carlo", href: "/monte-carlo", icon: TrendingUp, badge: "10k Runs" },
     { name: "Generator RAB Otomatis", href: "/rab", icon: Calculator },
     { name: "Intelijen Pasar (ID/JP)", href: "/market", icon: LineChart },

@@ -1,0 +1,122 @@
+{
+  "name": "WF-13: AgriSensa Advanced Data Analyst & Strategic Insights Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agrisensa/analyst",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wf13-webhook",
+      "name": "Data Analyst Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "agrisensa-analyst-v1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==========================================================================\n// DATA ANALYST CONTEXT & INTENT PARSER\n// ==========================================================================\nconst body = $input.first()?.json?.body || $input.first()?.json || {};\n\nconst komoditas = body.komoditas || body.commodity || 'Cabai Merah Keriting';\nconst lokasi = body.lokasi || body.location || 'Lembang, Jawa Barat';\nconst luas_ha = parseFloat(body.luas_ha || body.area_ha || 1.5);\nconst chart_format = (body.chart_format || body.format || 'echarts').toLowerCase();\nconst predicted_yield = parseFloat(body.predicted_yield || body.yield_ton_ha || 14.5);\n\n// Harmonize sub-domain inputs from other workflows or client payload\nconst soil_data = body.soil_data || body.soil || {\n  nitrogen: body.n || body.nitrogen || 95,\n  phosphorus: body.p || body.phosphorus || 48,\n  potassium: body.k || body.potassium || 58,\n  ph: body.ph || 6.4,\n  moisture: body.moisture || 70\n};\n\nconst market_data = body.market_data || body.market || {\n  current_price: body.current_price || body.harga_jual_rp_kg || 36000,\n  target_price: body.target_price || 39500,\n  historical_prices: body.historical_prices || [31000, 32500, 31800, 33500, 35000, 36000]\n};\n\nconst weather_data = body.weather_data || body.weather || {\n  rainfall_mm: body.rainfall_mm || body.curah_hujan || 175,\n  temperature_c: body.temperature_c || body.suhu || 24.2\n};\n\nconst financial_data = body.financial_data || body.financials || {\n  total_biaya_rp: body.total_biaya_rp || (45000000 * luas_ha)\n};\n\nreturn [{\n  json: {\n    komoditas: komoditas,\n    lokasi: lokasi,\n    luas_ha: luas_ha,\n    predicted_yield: predicted_yield,\n    chart_format: chart_format,\n    soil_data: soil_data,\n    market_data: market_data,\n    weather_data: weather_data,\n    financial_data: financial_data,\n    urea_kg: body.urea_kg || (200 * luas_ha),\n    npk_kg: body.npk_kg || (300 * luas_ha),\n    organik_kg: body.organik_kg || (2000 * luas_ha),\n    request_id: `analyst_${Date.now()}`,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf13-context-parser",
+      "name": "Context & Intent Parser",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_ENGINE_URL || 'http://host.docker.internal:8001' }}/analyst/synthesize",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"komoditas\": \"{{ $json.komoditas }}\",\n  \"lokasi\": \"{{ $json.lokasi }}\",\n  \"luas_ha\": {{ $json.luas_ha }},\n  \"predicted_yield\": {{ $json.predicted_yield }},\n  \"chart_format\": \"{{ $json.chart_format }}\",\n  \"soil_data\": {{ JSON.stringify($json.soil_data) }},\n  \"market_data\": {{ JSON.stringify($json.market_data) }},\n  \"weather_data\": {{ JSON.stringify($json.weather_data) }},\n  \"financial_data\": {{ JSON.stringify($json.financial_data) }},\n  \"urea_kg\": {{ $json.urea_kg }},\n  \"npk_kg\": {{ $json.npk_kg }},\n  \"organik_kg\": {{ $json.organik_kg }}\n}",
+        "options": {
+          "timeout": 45000,
+          "response": {"response": {"neverError": true}}
+        }
+      },
+      "id": "wf13-analyst-api",
+      "name": "AI Engine Data Analyst Synthesizer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==========================================================================\n// MODERN VISUALIZATION HUB & DASHBOARD COMPOSER\n// ==========================================================================\nconst res = $input.first().json;\nconst parserData = $('Context & Intent Parser').item.json;\nconst data = res.data || {};\n\nconst visualizations = data.visualizations || {};\nconst overallScore = data.overall_health_score || 80;\n\n// Determine Status Tier Badge\nlet statusBadge = '🟢 PRIMA & MENGUNTUNGKAN';\nif (overallScore < 60) {\n  statusBadge = '🔴 PERLU MITIGASI RISIKO SEGERA';\n} else if (overallScore < 75) {\n  statusBadge = '🟡 CUKUP SEHAT DENGAN CATATAN';\n}\n\nreturn [{\n  json: {\n    success: res.success !== false,\n    request_id: parserData.request_id,\n    title: `Laporan Analis Data Eksekutif: ${data.komoditas || parserData.komoditas} (${data.lokasi || parserData.lokasi})`,\n    overall_score: overallScore,\n    status_badge: statusBadge,\n    executive_summary: data.executive_summary,\n    key_findings: data.key_findings || [],\n    strategic_action_plan: data.strategic_action_plan || [],\n    pillar_scorecard: {\n      agronomic_health: data.agronomic_health_score,\n      market_opportunity: data.market_health_score,\n      financial_resilience: data.financial_resilience_score,\n      climate_risk_index: data.climate_risk_score,\n      esg_carbon_rating: data.esg_carbon_score\n    },\n    financial_diagnostics: data.financial_metrics,\n    market_diagnostics: data.market_dynamics,\n    risk_assessment: data.risk_assessment,\n    carbon_diagnostics: data.carbon_diagnostics,\n    visualizations: visualizations,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "wf13-viz-hub",
+      "name": "Visualization Hub & Dashboard Composer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-AgriSensa-Engine", "value": "WF-13-Data-Analyst-Strategic-Insights"}
+            ]
+          }
+        }
+      },
+      "id": "wf13-respond",
+      "name": "Respond to Client",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1160, 400]
+    }
+  ],
+  "connections": {
+    "Data Analyst Webhook": {
+      "main": [
+        [{"node": "Context & Intent Parser", "type": "main", "index": 0}]
+      ]
+    },
+    "Context & Intent Parser": {
+      "main": [
+        [{"node": "AI Engine Data Analyst Synthesizer", "type": "main", "index": 0}]
+      ]
+    },
+    "AI Engine Data Analyst Synthesizer": {
+      "main": [
+        [{"node": "Visualization Hub & Dashboard Composer", "type": "main", "index": 0}]
+      ]
+    },
+    "Visualization Hub & Dashboard Composer": {
+      "main": [
+        [{"node": "Respond to Client", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": [
+    "agrisensa",
+    "data-analyst",
+    "executive-insights",
+    "strategic-intelligence",
+    "echarts",
+    "plotly",
+    "monte-carlo"
+  ],
+  "meta": {
+    "description": "WF-13: AgriSensa Advanced Data Analyst & Strategic Insights Orchestrator - Cross-Workflow Analytics Synthesis with Modern Visualizations (Radar Scorecard, VaR Density, Waterfall, Dual-Axis Anomaly)"
+  }
+}

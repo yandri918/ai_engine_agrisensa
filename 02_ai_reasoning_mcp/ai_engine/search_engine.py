@@ -26,6 +26,12 @@ from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
+from dotenv import load_dotenv
+
+load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../.env"))
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))
+
 logger = logging.getLogger("agrisensa.search_engine")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -33,13 +39,16 @@ logger = logging.getLogger("agrisensa.search_engine")
 # ─────────────────────────────────────────────────────────────────────────────
 
 try:
-    from duckduckgo_search import DDGS
+    try:
+        from ddgs import DDGS
+    except ImportError:
+        from duckduckgo_search import DDGS
     DDG_AVAILABLE = True
-    logger.info("duckduckgo-search available")
+    logger.info("DuckDuckGo Search (DDGS) available")
 except ImportError:
     DDGS = None
     DDG_AVAILABLE = False
-    logger.warning("duckduckgo-search not installed → using fallback. pip install duckduckgo-search")
+    logger.warning("duckduckgo-search not installed → using fallback.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -35,6 +35,7 @@ from ai_engine import (
     RABEngine, MonteCarloEngine, JaMarketIntelEngine,
     CarbonModel, ForecastingModel, LanguageSwitchEngine, PDFGenerator,
     SearchEngine, WebScraper, DocumentParser, ChartEngine, SupplyChainEngine,
+    DataAnalystEngine, FertilizerEngine,
 )
 
 from dotenv import load_dotenv
@@ -59,6 +60,7 @@ app = FastAPI(
     title="AgriSensa Advanced AI Engine & MCP API",
     description=(
         "🌾 **AI Engine & MCP Tools** untuk AgriSensa Platform:\n\n"
+        "- **Data Analyst & Strategic Insights** — Sintesis eksekutif multi-workflow\n"
         "- **RAB Engine** — Rencana Anggaran Biaya + ROI/BEP/MOS/TCR\n"
         "- **Monte Carlo** — 10.000 iterasi simulasi risiko\n"
         "- **JA Market Intel** — Harga pasar Jepang (農協)\n"
@@ -70,7 +72,7 @@ app = FastAPI(
         "- **Firecrawl Scraper MCP** — Scrape web agrikultur & BAPANAS\n"
         "- **Document Parser MCP** — Parse PDF/Word/Excel/CSV upload\n"
     ),
-    version="2.0.0",
+    version="2.3.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -104,6 +106,8 @@ def get_engine(name: str):
             "parser":   DocumentParser,
             "chart":    ChartEngine,
             "supply_chain": SupplyChainEngine,
+            "analyst":  DataAnalystEngine,
+            "fertilizer": FertilizerEngine,
         }
         _engines[name] = engine_map[name]()
         logger.info(f"Engine '{name}' initialized")
@@ -225,6 +229,20 @@ class FullResearchMCPRequest(BaseModel):
     scrape_top_n: int = Field(2, ge=1, le=5)
     language: str = Field("id")
     generate_pdf: bool = Field(True)
+
+class DataAnalystRequest(BaseModel):
+    komoditas: Optional[str] = Field("Cabai Merah Keriting", example="Cabai Merah Keriting")
+    lokasi: Optional[str] = Field("Lembang, Jawa Barat", example="Lembang, Jawa Barat")
+    luas_ha: Optional[float] = Field(1.0, ge=0.01, example=1.5)
+    predicted_yield: Optional[float] = Field(14.5, description="Estimasi hasil panen (ton/ha)")
+    chart_format: Optional[str] = Field("echarts", example="echarts")
+    soil_data: Optional[Dict[str, Any]] = Field(default_factory=dict, description="NPK, pH, Kelembaban")
+    market_data: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Historical prices, current price")
+    weather_data: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Rainfall mm, temp")
+    financial_data: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Cost breakdown")
+    urea_kg: Optional[float] = None
+    npk_kg: Optional[float] = None
+    organik_kg: Optional[float] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -759,6 +777,103 @@ async def calculate_shelf_life(req: ShelfLifeLossRequest):
         logger.error(f"Shelf life calculation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/analyst/synthesize", summary="AgriSensa Advanced Data Analyst & Strategic Synthesis", tags=["Executive Intelligence"])
+async def synthesize_data_analyst(req: DataAnalystRequest):
+    """
+    Sintesis Lintas-Workflow Data Analyst Eksekutif:
+    Mengintegrasikan data pasar, cuaca, agronomi, finansial/Monte Carlo, dan jejak karbon ESG.
+    Menghasilkan skor kelayakan 5-pilar, rekomendasi preskriptif, serta spesifikasi visualisasi modern.
+    """
+    try:
+        engine: DataAnalystEngine = get_engine("analyst")
+        payload = req.model_dump()
+        result = engine.synthesize_from_dict(payload)
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Data synthesis failed"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Data Analyst Synthesis error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fertilizer Engineering & Recipe Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+class OrganicMaterialItem(BaseModel):
+    material: str = Field(..., example="Kotoran Sapi")
+    weight_kg: float = Field(..., example=100.0)
+
+class OrganicCalculatorRequest(BaseModel):
+    items: List[OrganicMaterialItem] = Field(
+        ...,
+        example=[
+            {"material": "Kotoran Sapi", "weight_kg": 100.0},
+            {"material": "Dedak Padi (Katul Halus)", "weight_kg": 20.0},
+            {"material": "Abu Dapur (Kayu Keras)", "weight_kg": 10.0}
+        ]
+    )
+
+class CombinationCalculatorRequest(BaseModel):
+    target_n_kg: float = Field(100.0, example=100.0)
+    target_p_kg: float = Field(50.0, example=50.0)
+    target_k_kg: float = Field(60.0, example=60.0)
+    land_area_ha: float = Field(1.0, example=1.0)
+    buffer_pct: float = Field(5.0, example=5.0)
+
+@app.post("/fertilizer/organic-calculator", summary="Hitung Formulasi NPK Pupuk Organik", tags=["Fertilizer Engine"])
+async def calculate_organic_fertilizer(req: OrganicCalculatorRequest):
+    """
+    Menghitung estimasi kandungan N-P-K (%), hara real (kg), rasio C/N, dan diagnosa kegunaan
+    dari racikan bahan organik berdasarkan referensi ilmiah Balitbangtan & FAO.
+    """
+    try:
+        engine: FertilizerEngine = get_engine("fertilizer")
+        items = [i.model_dump() for i in req.items]
+        res = engine.calculate_organic_mix(items)
+        if not res.get("success"):
+            raise HTTPException(status_code=400, detail=res.get("message", "Perhitungan gagal"))
+        return res
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Organic fertilizer calculator error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/fertilizer/combination-calculator", summary="Kalkulator Formulasi Pupuk Kombinasi", tags=["Fertilizer Engine"])
+async def calculate_fertilizer_combination(req: CombinationCalculatorRequest):
+    """
+    Nutrient-to-Weight Blending Solver:
+    Menghitung rekomendasi 3 skenario pemenuhan hara (Pupuk Tunggal, NPK Majemuk, dan Hybrid Organik-Kimia),
+    lengkap dengan estimasi biaya, jumlah karung 50kg, dan keunggulan agronomi.
+    """
+    try:
+        engine: FertilizerEngine = get_engine("fertilizer")
+        res = engine.calculate_combination_blending(
+            target_n_kg=req.target_n_kg,
+            target_p_kg=req.target_p_kg,
+            target_k_kg=req.target_k_kg,
+            land_area_ha=req.land_area_ha,
+            buffer_pct=req.buffer_pct
+        )
+        return res
+    except Exception as e:
+        logger.error(f"Combination fertilizer calculator error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/fertilizer/recipes", summary="Daftar SOP & Resep Pupuk Organik Premium", tags=["Fertilizer Engine"])
+async def get_fertilizer_recipes():
+    """Mengambil ensiklopedia SOP resep POC ROTAN, Bioaktivator Rumen, Biang Trichoderma, dan Bokashi."""
+    engine: FertilizerEngine = get_engine("fertilizer")
+    return {"success": True, "recipes": engine.get_recipes()}
+
+@app.get("/fertilizer/materials", summary="Daftar Bahan Baku Organik Ilmiah", tags=["Fertilizer Engine"])
+async def get_fertilizer_materials():
+    """Mengambil database 15+ bahan baku organik ilmiah (kadar NPK, C/N ratio, fungsi)."""
+    engine: FertilizerEngine = get_engine("fertilizer")
+    return {"success": True, "materials": engine.get_raw_materials()}
+
 
 if __name__ == "__main__":
     import uvicorn
@@ -770,3 +885,4 @@ if __name__ == "__main__":
         reload=True,
         log_level="info",
     )
+

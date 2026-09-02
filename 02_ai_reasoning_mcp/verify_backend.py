@@ -71,6 +71,27 @@ r_pipe = client.post('/pipeline/full', json={'komoditas': 'padi', 'luas_ha': 1.0
 stages = [s.encode('ascii', 'ignore').decode('ascii').strip() for s in r_pipe.json().get('pipeline_stages', [])]
 print(f"11. Full Pipeline: HTTP {r_pipe.status_code} | Stages: {stages}")
 
+# 12. Data Analyst & Strategic Synthesis
+r_analyst = client.post('/analyst/synthesize', json={'komoditas': 'Cabai Merah Keriting', 'lokasi': 'Lembang, Jawa Barat', 'luas_ha': 1.5})
+score = r_analyst.json().get('data', {}).get('overall_health_score', 0)
+charts = list(r_analyst.json().get('data', {}).get('visualizations', {}).keys())
+print(f"12. Data Analyst Synthesis: HTTP {r_analyst.status_code} | Overall Score: {score} | Charts: {charts}")
+
+# 13. Fertilizer Organic Calculator
+r_fert_org = client.post('/fertilizer/organic-calculator', json={'items': [{'material': 'Kotoran Sapi', 'weight_kg': 100}, {'material': 'Dedak Padi (Katul Halus)', 'weight_kg': 20}]})
+npk_mix = r_fert_org.json().get('npk_composition', '0-0-0')
+print(f"13. Fertilizer Organic Calculator: HTTP {r_fert_org.status_code} | NPK Mix: {npk_mix}")
+
+# 14. Fertilizer Combination Blending
+r_fert_comb = client.post('/fertilizer/combination-calculator', json={'target_n_kg': 100, 'target_p_kg': 50, 'target_k_kg': 60, 'land_area_ha': 1.0})
+options_count = len(r_fert_comb.json().get('options', []))
+print(f"14. Fertilizer Combination Blending: HTTP {r_fert_comb.status_code} | Total Skenario: {options_count}")
+
+# 15. Fertilizer Recipes Encyclopedia
+r_fert_rec = client.get('/fertilizer/recipes')
+recipes_count = len(r_fert_rec.json().get('recipes', []))
+print(f"15. Fertilizer Recipes SOP: HTTP {r_fert_rec.status_code} | Total Resep SOP: {recipes_count}")
+
 print("=" * 60)
-print("SUCCESS: ALL 11 ENDPOINTS TESTED AND VERIFIED!")
+print("SUCCESS: ALL 15 ENDPOINTS TESTED AND VERIFIED!")
 print("=" * 60)

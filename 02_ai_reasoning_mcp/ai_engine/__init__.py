@@ -27,11 +27,13 @@ from .language_switch   import LanguageSwitchEngine, LanguageSwitchResult
 from .pdf_generator     import PDFGenerator
 from .supply_chain      import SupplyChainEngine
 
-# MCP Tools
+# MCP Tools & Intelligence
 from .search_engine     import SearchEngine, SearchResult, SearchEngineResult
 from .web_scraper       import WebScraper, ScrapeResult
 from .document_parser   import DocumentParser, ParsedDocumentResult
 from .chart_engine      import ChartEngine
+from .data_analyst      import DataAnalystEngine, ExecutiveInsight
+from .fertilizer_engine import FertilizerEngine, ORGANIC_MATERIALS_DB, INORGANIC_FERTILIZERS_DB, RECIPES_DATABASE
 
 __all__ = [
     "RABEngine", "RABInput", "RABResult",
@@ -42,11 +44,13 @@ __all__ = [
     "LanguageSwitchEngine", "LanguageSwitchResult",
     "PDFGenerator",
     "SupplyChainEngine",
-    # MCP Tools
+    # MCP Tools & Intelligence
     "SearchEngine", "SearchResult", "SearchEngineResult",
     "WebScraper", "ScrapeResult",
     "DocumentParser", "ParsedDocumentResult",
     "ChartEngine",
+    "DataAnalystEngine", "ExecutiveInsight",
+    "FertilizerEngine", "ORGANIC_MATERIALS_DB", "INORGANIC_FERTILIZERS_DB", "RECIPES_DATABASE",
 ]
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
