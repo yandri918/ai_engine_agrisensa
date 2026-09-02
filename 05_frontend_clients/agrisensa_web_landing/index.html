@@ -160,7 +160,15 @@
 
 <body>
     <nav>
-        <div class="nav-container"><a href="#" class="logo">🌾 AgriSensa</a></div>
+        <div class="nav-container">
+            <a href="#" class="logo">🌾 AgriSensa</a>
+            <ul class="nav-links">
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#tech">Tech Stack</a></li>
+                <li><a href="/sign-in" style="background: var(--primary); color: white; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 600;">🔐 Masuk / Login</a></li>
+            </ul>
+        </div>
     </nav>
 
     <section class="hero">
@@ -168,11 +176,14 @@
         <p style="font-size: 1.5rem; margin-bottom: 2rem;">Platform Pertanian Cerdas Berbasis AI</p>
         <p style="max-width: 800px; margin: 0 auto 2rem;">Platform komprehensif dengan 25+ modul AI untuk memberdayakan
             petani Indonesia</p>
-        <a href="https://huggingface.co/spaces/yandri918/agrisensa-api" class="btn btn-primary" target="_blank">🚀 Live
-            Demo</a>
+        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <a href="/sign-in" class="btn btn-primary">🔐 Masuk ke Platform</a>
+            <a href="https://huggingface.co/spaces/yandri918/agrisensa-api" class="btn" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);" target="_blank">🚀 Live Demo API</a>
+        </div>
     </section>
 
-    <div class="container">
+    <div class="container" id="overview">
+
         <section class="section">
             <h2 class="section-title">Project Overview</h2>
             <div class="grid grid-4">
@@ -195,7 +206,7 @@
             </div>
         </section>
 
-        <section class="section">
+        <section class="section" id="features">
             <h2 class="section-title">Key Features</h2>
             <div class="grid grid-3">
                 <div class="card">
@@ -231,8 +242,9 @@
             </div>
         </section>
 
-        <section class="section">
+        <section class="section" id="tech">
             <h2 class="section-title">Technology Stack</h2>
+
             <div class="grid grid-3">
                 <div class="card">
                     <h3 style="color: var(--primary);">Backend</h3>

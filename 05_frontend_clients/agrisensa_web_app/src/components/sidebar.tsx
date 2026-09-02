@@ -3,9 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Show, UserButton } from "@clerk/nextjs";
 import { useNavigation } from "./navigation-context";
 import { useLanguage } from "./language-context";
 import { X, Sprout } from "lucide-react";
+
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -82,18 +84,44 @@ export function Sidebar() {
         ))}
       </div>
 
-      <div className="p-4 border-t border-slate-800/80 mx-3 mb-4 rounded-xl bg-slate-900/50">
-        <div className="space-y-0.5">
-          <p className="text-[11px] font-bold tracking-wider text-slate-200 uppercase">
+      <div className="p-3 border-t border-slate-800/80 mx-3 mb-4 rounded-xl bg-slate-900/50 space-y-2">
+        <Show when="signed-in">
+          <div className="flex items-center gap-2.5 px-1 py-1">
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonAvatarBox: "h-7 w-7 ring-2 ring-emerald-500/40",
+                  userButtonOuterIdentifier: "text-xs font-semibold text-slate-200",
+                },
+              }}
+              showName
+            />
+          </div>
+        </Show>
+
+        <Show when="signed-out">
+          <Link
+            href="/sign-in"
+            onClick={closeMobile}
+            className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold border border-emerald-500/20 transition-all"
+          >
+            <span>{t("auth_sign_in", "Masuk ke Akun")}</span>
+            <span className="text-[10px] bg-emerald-500/30 px-1.5 py-0.5 rounded text-emerald-200">Auth</span>
+          </Link>
+        </Show>
+
+        <div className="space-y-0.5 px-1 pt-1 border-t border-slate-800/60">
+          <p className="text-[10px] font-bold tracking-wider text-slate-300 uppercase">
             AgriSensa Engine
           </p>
-          <p className="text-[10px] font-medium text-emerald-400">
+          <p className="text-[9px] font-medium text-emerald-400">
             {t("status_online", "Sistem Aktif & Terhubung")}
           </p>
         </div>
       </div>
     </div>
   );
+
 
   return (
     <>

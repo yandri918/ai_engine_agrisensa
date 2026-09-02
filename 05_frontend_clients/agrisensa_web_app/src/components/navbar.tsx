@@ -2,11 +2,12 @@
 
 import React from "react";
 import Link from "next/link";
+import { Show, UserButton } from "@clerk/nextjs";
 import { ServiceStatusBadge } from "./service-status-badge";
 import { LanguageSwitcher } from "./language-switcher";
 import { useNavigation } from "./navigation-context";
 import { useLanguage } from "./language-context";
-import { Sprout, Sparkles, Menu, X } from "lucide-react";
+import { Sprout, Sparkles, Menu, X, LogIn } from "lucide-react";
 
 export function Navbar() {
   const { isMobileOpen, toggleMobile } = useNavigation();
@@ -51,28 +52,54 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Right: Engine Status, Language Switcher & AI Chat Quick Action */}
+        {/* Right: Engine Status, Language Switcher, AI Chat Quick Action & Clerk Auth */}
         <div className="flex items-center gap-2 sm:gap-3">
           <ServiceStatusBadge />
 
           {/* Language Switcher Dropdown */}
           <LanguageSwitcher />
 
-          <div className="hidden lg:flex items-center gap-2 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-400">
+          <div className="hidden xl:flex items-center gap-2 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-400">
             <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span>{t("deepseek_active", "DeepSeek-V3 Active")}</span>
           </div>
 
           <Link
             href="/chat"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md shadow-emerald-500/20 transition-all active:scale-95 shrink-0"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs font-semibold transition-all active:scale-95 shrink-0"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t("open_ai_chat", "Buka AI Chat")}</span>
-            <span className="sm:hidden">AI Chat</span>
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{t("open_ai_chat", "AI Chat")}</span>
           </Link>
+
+          {/* Clerk Auth Integration */}
+          <div className="flex items-center gap-2 pl-1 border-l border-slate-800">
+            <Show when="signed-out">
+              <Link
+                href="/sign-in"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md shadow-emerald-500/20 transition-all active:scale-95 shrink-0"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>{t("auth_sign_in", "Masuk")}</span>
+              </Link>
+            </Show>
+
+            <Show when="signed-in">
+              <div className="flex items-center gap-2">
+                <UserButton
+                  appearance={{
+                    elements: {
+                      userButtonAvatarBox: "h-8 w-8 sm:h-9 sm:w-9 ring-2 ring-emerald-500/50 hover:ring-emerald-400 transition-all",
+                    },
+                  }}
+                />
+              </div>
+            </Show>
+          </div>
         </div>
       </div>
     </header>
   );
 }
+
+
