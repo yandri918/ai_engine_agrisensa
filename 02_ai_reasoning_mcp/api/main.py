@@ -35,7 +35,7 @@ from ai_engine import (
     RABEngine, MonteCarloEngine, JaMarketIntelEngine,
     CarbonModel, ForecastingModel, LanguageSwitchEngine, PDFGenerator,
     SearchEngine, WebScraper, DocumentParser, ChartEngine, SupplyChainEngine,
-    DataAnalystEngine, FertilizerEngine,
+    DataAnalystEngine, FertilizerEngine, SOPEngine, SOPRequestPayload,
 )
 
 from dotenv import load_dotenv
@@ -108,6 +108,7 @@ def get_engine(name: str):
             "supply_chain": SupplyChainEngine,
             "analyst":  DataAnalystEngine,
             "fertilizer": FertilizerEngine,
+            "sop":      SOPEngine,
         }
         _engines[name] = engine_map[name]()
         logger.info(f"Engine '{name}' initialized")
@@ -931,6 +932,56 @@ async def parse_stored_document(req: StoredDocumentParseRequest):
     except Exception as e:
         logger.error(f"Error parsing stored document {req.filename}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Commodity SOP Precision Generator Endpoints (GAP + M-48 + AI + Journals)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SOPGenerateRequest(BaseModel):
+    komoditas: str = Field("Cabai Merah", description="Nama komoditas pertanian")
+    luas_ha: float = Field(1.0, ge=0.01, le=1000.0, description="Luas lahan dalam hektar")
+    elevasi_mdpl: int = Field(250, ge=0, le=3500, description="Ketinggian lahan dari permukaan laut (mdpl)")
+    musim: str = Field("Kemarau", description="Musim tanam: Kemarau, Penghujan, Pancaroba")
+    sistem_budidaya: str = Field("GAP Standar", description="Sistem budidaya: Organik Murni, GAP Standar, Semi-Organik, Smart Farming IoT")
+    target_pasar: str = Field("Domestik Premium", description="Target pasar: Domestik Premium, Ekspor Jepang, Industri Olahan")
+
+@app.get("/sop/commodities", summary="Daftar Komoditas SOP Presisi", tags=["SOP Engine"])
+async def get_sop_commodities():
+    """Mengambil katalog komoditas pertanian yang didukung SOP Engine beserta varietas dan parameter default."""
+    try:
+        engine: SOPEngine = get_engine("sop")
+        commodities = engine.get_supported_commodities()
+        return {"success": True, "total": len(commodities), "commodities": commodities}
+    except Exception as e:
+        logger.error(f"Error fetching SOP commodities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/sop/generate", summary="Generate SOP Budidaya Presisi (AI + Jurnal Ilmiah)", tags=["SOP Engine"])
+async def generate_commodity_sop(req: SOPGenerateRequest):
+    """
+    SOP Budidaya Presisi & PHT Modul M-48:
+    Menghasilkan Standard Operating Procedure (SOP) lengkap per komoditi berdasarkan:
+    1. Logika Agronomi Baku AgriSensa (Kalender Fase, Jadwal Pemupukan, Resep PHT M-48).
+    2. Sintesis AI Reasoning Agent (Kondisi Luas Lahan, Elevasi mdpl, Musim Tanam).
+    3. Rujukan Sitasi Jurnal Ilmiah Peer-Reviewed Terpercaya (IPB, BRIN, FAO, Springer).
+    """
+    try:
+        engine: SOPEngine = get_engine("sop")
+        payload = SOPRequestPayload(
+            komoditas=req.komoditas,
+            luas_ha=req.luas_ha,
+            elevasi_mdpl=req.elevasi_mdpl,
+            musim=req.musim,
+            sistem_budidaya=req.sistem_budidaya,
+            target_pasar=req.target_pasar,
+        )
+        result = engine.generate_sop(payload)
+        return result
+    except Exception as e:
+        logger.error(f"Error generating SOP for {req.komoditas}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 

@@ -27,6 +27,7 @@ export function Sidebar() {
     {
       title: "Simulasi & Perencanaan",
       items: [
+        { name: "Generator SOP Komoditas", href: "/sop", tag: "AI + Jurnal" },
         { name: "Simulasi Monte Carlo", href: "/monte-carlo", tag: "10k Runs" },
         { name: "Generator RAB Otomatis", href: "/rab", tag: "Baku" },
         { name: "Intelijen Pasar", href: "/market", tag: "ID / JP" },

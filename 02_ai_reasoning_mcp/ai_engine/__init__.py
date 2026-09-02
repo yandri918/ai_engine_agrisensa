@@ -34,6 +34,7 @@ from .document_parser   import DocumentParser, ParsedDocumentResult
 from .chart_engine      import ChartEngine
 from .data_analyst      import DataAnalystEngine, ExecutiveInsight
 from .fertilizer_engine import FertilizerEngine, ORGANIC_MATERIALS_DB, INORGANIC_FERTILIZERS_DB, RECIPES_DATABASE
+from .sop_engine        import SOPEngine, SOPRequestPayload, SOPGeneratedResult
 
 __all__ = [
     "RABEngine", "RABInput", "RABResult",
@@ -51,6 +52,7 @@ __all__ = [
     "ChartEngine",
     "DataAnalystEngine", "ExecutiveInsight",
     "FertilizerEngine", "ORGANIC_MATERIALS_DB", "INORGANIC_FERTILIZERS_DB", "RECIPES_DATABASE",
+    "SOPEngine", "SOPRequestPayload", "SOPGeneratedResult",
 ]
 
 __version__ = "2.3.0"
