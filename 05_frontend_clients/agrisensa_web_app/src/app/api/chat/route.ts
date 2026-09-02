@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "sk-1fcec76da2d24a0a92c44ea1868f999b";
 
 /** Ensure AI response text is clean UTF-8 */
 function toUtf8(text: string): string {
