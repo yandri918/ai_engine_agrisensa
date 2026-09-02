@@ -4,36 +4,38 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useNavigation } from "./navigation-context";
+import { useLanguage } from "./language-context";
 import { X, Sprout } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { isMobileOpen, closeMobile } = useNavigation();
+  const { t } = useLanguage();
 
   const navigationSections = [
     {
-      title: "Pusat Kontrol",
+      title: t("nav_control_center", "Pusat Kontrol"),
       items: [
-        { name: "Command Center", href: "/" },
-        { name: "Data Analyst Eksekutif", href: "/analyst", tag: "AI Strategic" },
+        { name: t("nav_command_center", "Command Center"), href: "/" },
+        { name: t("nav_data_analyst", "Data Analyst Eksekutif"), href: "/analyst", tag: "AI Strategic" },
       ],
     },
     {
-      title: "Laboratorium & Analisis",
+      title: t("nav_lab_analysis", "Laboratorium & Analisis"),
       items: [
-        { name: "Laboratorium Pupuk", href: "/fertilizer", tag: "Formulasi" },
-        { name: "Perpustakaan Riset & SOP", href: "/documents", tag: "PDF AI" },
-        { name: "Laboratorium MLOps", href: "/mlops", tag: "16 Komoditas" },
-        { name: "Asisten AI Agronomi", href: "/chat" },
+        { name: t("nav_fertilizer_lab", "Laboratorium Pupuk"), href: "/fertilizer", tag: "Formulasi" },
+        { name: t("nav_research_library", "Perpustakaan Riset & SOP"), href: "/documents", tag: "PDF AI" },
+        { name: t("nav_mlops_lab", "Laboratorium MLOps"), href: "/mlops", tag: "16 Komoditas" },
+        { name: t("nav_ai_assistant", "Asisten AI Agronomi"), href: "/chat" },
       ],
     },
     {
-      title: "Simulasi & Perencanaan",
+      title: t("nav_sim_planning", "Simulasi & Perencanaan"),
       items: [
-        { name: "Generator SOP Komoditas", href: "/sop", tag: "AI + Jurnal" },
-        { name: "Simulasi Monte Carlo", href: "/monte-carlo", tag: "10k Runs" },
-        { name: "Generator RAB Otomatis", href: "/rab", tag: "Baku" },
-        { name: "Intelijen Pasar", href: "/market", tag: "ID / JP" },
+        { name: t("nav_sop_generator", "Generator SOP Komoditas"), href: "/sop", tag: "AI + Jurnal" },
+        { name: t("nav_monte_carlo", "Simulasi Monte Carlo"), href: "/monte-carlo", tag: "10k Runs" },
+        { name: t("nav_rab_generator", "Generator RAB Otomatis"), href: "/rab", tag: "Baku" },
+        { name: t("nav_market_intel", "Intelijen Pasar"), href: "/market", tag: "ID / JP" },
       ],
     },
   ];
@@ -86,7 +88,7 @@ export function Sidebar() {
             AgriSensa Engine
           </p>
           <p className="text-[10px] font-medium text-emerald-400">
-            Sistem Aktif & Terhubung
+            {t("status_online", "Sistem Aktif & Terhubung")}
           </p>
         </div>
       </div>
@@ -95,27 +97,20 @@ export function Sidebar() {
 
   return (
     <>
-      {/* ───────────────────────────────────────────────────────────────── */}
-      {/* DESKTOP SIDEBAR (Static on >= md screens)                          */}
-      {/* ───────────────────────────────────────────────────────────────── */}
+      {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex flex-col w-64 border-r border-slate-800/80 bg-[#070b14] shrink-0 min-h-[calc(100vh-4rem)] font-sans select-none">
         {renderNavContent()}
       </aside>
 
-      {/* ───────────────────────────────────────────────────────────────── */}
-      {/* MOBILE SLIDE-IN DRAWER (Rendered on < md screens when open)       */}
-      {/* ───────────────────────────────────────────────────────────────── */}
+      {/* MOBILE SLIDE-IN DRAWER */}
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
-          {/* Backdrop blur overlay */}
           <div
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
             onClick={closeMobile}
           />
 
-          {/* Drawer Panel */}
           <div className="relative w-4/5 max-w-xs bg-[#070b14] border-r border-slate-800/80 h-full flex flex-col z-10 shadow-2xl animate-in slide-in-from-left duration-200">
-            {/* Drawer Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-800/80">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5">
@@ -138,7 +133,6 @@ export function Sidebar() {
               </button>
             </div>
 
-            {/* Drawer Navigation List */}
             <div className="flex-1 overflow-y-auto pb-6">
               {renderNavContent()}
             </div>

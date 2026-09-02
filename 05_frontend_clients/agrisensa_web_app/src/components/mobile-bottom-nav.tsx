@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useNavigation } from "./navigation-context";
+import { useLanguage } from "./language-context";
 import {
   LayoutDashboard,
   LineChart,
@@ -17,13 +18,14 @@ import {
 export function MobileBottomNav() {
   const pathname = usePathname();
   const { isMobileOpen, toggleMobile } = useNavigation();
+  const { t } = useLanguage();
 
   const primaryNavItems = [
-    { name: "Beranda", href: "/", icon: LayoutDashboard },
-    { name: "Analyst", href: "/analyst", icon: LineChart },
-    { name: "Pupuk", href: "/fertilizer", icon: FlaskConical },
-    { name: "SOP", href: "/sop", icon: FileText },
-    { name: "AI Chat", href: "/chat", icon: Sparkles },
+    { name: t("bottom_home", "Beranda"), href: "/", icon: LayoutDashboard },
+    { name: t("bottom_analyst", "Analyst"), href: "/analyst", icon: LineChart },
+    { name: t("bottom_fertilizer", "Pupuk"), href: "/fertilizer", icon: FlaskConical },
+    { name: t("bottom_sop", "SOP"), href: "/sop", icon: FileText },
+    { name: t("bottom_chat", "AI Chat"), href: "/chat", icon: Sparkles },
   ];
 
   return (
@@ -61,7 +63,7 @@ export function MobileBottomNav() {
           ) : (
             <Menu className="w-5 h-5" />
           )}
-          <span className="text-[10px] mt-0.5 tracking-tight">Menu</span>
+          <span className="text-[10px] mt-0.5 tracking-tight">{t("bottom_menu", "Menu")}</span>
         </button>
       </div>
     </nav>

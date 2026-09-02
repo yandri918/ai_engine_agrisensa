@@ -3,11 +3,14 @@
 import React from "react";
 import Link from "next/link";
 import { ServiceStatusBadge } from "./service-status-badge";
+import { LanguageSwitcher } from "./language-switcher";
 import { useNavigation } from "./navigation-context";
+import { useLanguage } from "./language-context";
 import { Sprout, Sparkles, Menu, X } from "lucide-react";
 
 export function Navbar() {
   const { isMobileOpen, toggleMobile } = useNavigation();
+  const { t } = useLanguage();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-[#070b14]/90 backdrop-blur-xl">
@@ -35,26 +38,29 @@ export function Navbar() {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-base sm:text-lg tracking-tight text-white group-hover:text-emerald-400 transition-colors">
-                  AgriSensa
+                  {t("app_name", "AgriSensa AI")}
                 </span>
                 <span className="text-[9px] sm:text-[10px] uppercase font-extrabold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  AI v2.0
+                  v2.5
                 </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium hidden sm:block truncate max-w-[200px] lg:max-w-none">
-                Smart Agriculture & MLOps Engine
+                {t("app_subtitle", "Smart Agriculture & MLOps Engine")}
               </p>
             </div>
           </Link>
         </div>
 
-        {/* Right: Engine Status & AI Chat Quick Action */}
+        {/* Right: Engine Status, Language Switcher & AI Chat Quick Action */}
         <div className="flex items-center gap-2 sm:gap-3">
           <ServiceStatusBadge />
 
+          {/* Language Switcher Dropdown */}
+          <LanguageSwitcher />
+
           <div className="hidden lg:flex items-center gap-2 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-400">
             <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span>DeepSeek-V3 Active</span>
+            <span>{t("deepseek_active", "DeepSeek-V3 Active")}</span>
           </div>
 
           <Link
@@ -62,7 +68,7 @@ export function Navbar() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md shadow-emerald-500/20 transition-all active:scale-95 shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Buka AI Chat</span>
+            <span className="hidden sm:inline">{t("open_ai_chat", "Buka AI Chat")}</span>
             <span className="sm:hidden">AI Chat</span>
           </Link>
         </div>
