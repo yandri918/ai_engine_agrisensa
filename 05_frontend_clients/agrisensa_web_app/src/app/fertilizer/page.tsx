@@ -408,7 +408,7 @@ export default function FertilizerPage() {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie data={weightPieData} dataKey="value" cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={4}>
-                            {weightPieData.map((entry, index) => (
+                            {weightPieData.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={entry.fill} />
                             ))}
                           </Pie>
