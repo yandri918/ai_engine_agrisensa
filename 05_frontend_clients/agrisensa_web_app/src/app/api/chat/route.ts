@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 
 /** Ensure AI response text is clean UTF-8 */
@@ -68,82 +67,51 @@ export async function POST(req: NextRequest) {
         : ""
     }Pertanyaan Petani / Pengguna: ${message}`;
 
-    // 1. PRIMARY: Call Google Gemini (gemini-3.5-flash-lite)
-    try {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
-      const geminiRes = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: fullPrompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048,
+    // Call DeepSeek API (deepseek-chat / DeepSeek-V3)
+    if (DEEPSEEK_API_KEY) {
+      try {
+        const messages = [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...history.slice(-4).map((h: { role: string; content: string }) => ({
+            role: h.role === "user" ? "user" : "assistant",
+            content: h.content,
+          })),
+          {
+            role: "user",
+            content: cropContext ? `[Konteks Lahan: ${cropContext}]\n\nPertanyaan: ${message}` : message,
           },
-        }),
-      });
+        ];
 
-      if (geminiRes.ok) {
-        const data = await geminiRes.json();
-        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (reply) {
-          return jsonUtf8({
-            response: toUtf8(reply),
-            model: "Gemini 3.5 Flash (Deep Reasoning)",
-          });
+        const response = await fetch("https://api.deepseek.com/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "deepseek-chat",
+            messages,
+            temperature: 0.7,
+            max_tokens: 1500,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const reply = data.choices?.[0]?.message?.content;
+          if (reply) {
+            return jsonUtf8({
+              response: toUtf8(reply),
+              model: "DeepSeek-V3",
+            });
+          }
+        } else {
+          const errText = await response.text();
+          console.warn("DeepSeek API error:", response.status, errText);
         }
-      } else {
-        const errText = await geminiRes.text();
-        console.warn("Gemini API Error:", geminiRes.status, errText);
+      } catch (deepseekErr) {
+        console.warn("DeepSeek fetch error:", deepseekErr);
       }
-    } catch (geminiErr) {
-      console.warn("Gemini fetch failed, trying DeepSeek:", geminiErr);
-    }
-
-    // 2. SECONDARY: Call DeepSeek API
-    try {
-      const messages = [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...history.slice(-4).map((h: { role: string; content: string }) => ({
-          role: h.role === "user" ? "user" : "assistant",
-          content: h.content,
-        })),
-        {
-          role: "user",
-          content: cropContext ? `[Konteks Lahan: ${cropContext}]\n\nPertanyaan: ${message}` : message,
-        },
-      ];
-
-      const response = await fetch("https://api.deepseek.com/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages,
-          temperature: 0.7,
-          max_tokens: 1500,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content;
-        if (reply) {
-          return jsonUtf8({
-            response: toUtf8(reply),
-            model: "DeepSeek-V3",
-          });
-        }
-      }
-    } catch (deepseekErr) {
-      console.warn("DeepSeek API fetch error:", deepseekErr);
     }
 
     // 3. TERTIARY: Dynamic Fallback

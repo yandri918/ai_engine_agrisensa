@@ -202,9 +202,9 @@ class LanguageSwitchEngine:
     """
 
     def __init__(self):
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
-        self.has_gemini = bool(self.gemini_api_key)
-        logger.info(f"LanguageSwitchEngine init, Gemini={'✓' if self.has_gemini else '✗'}")
+        self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "") or os.getenv("OPENAI_API_KEY", "")
+        self.has_ai = bool(self.deepseek_api_key)
+        logger.info(f"LanguageSwitchEngine init, DeepSeek={'✓' if self.has_ai else '✗'}")
 
     # ──────────────────────────────────────
     # Public API
@@ -218,12 +218,12 @@ class LanguageSwitchEngine:
         """
         glossary_hits = self._find_glossary_hits(text, source_lang)
 
-        if self.has_gemini:
+        if self.has_ai:
             translated = self._translate_with_gemini(text, source_lang, target_lang, context)
-            used_gemini = True
+            used_ai = True
         else:
             translated = self._translate_with_template(text, source_lang, target_lang, glossary_hits)
-            used_gemini = False
+            used_ai = False
 
         # Build bilingual template
         template = self._get_template(context, source_lang, target_lang)
@@ -234,7 +234,7 @@ class LanguageSwitchEngine:
             original_text=text,
             translated_text=translated,
             bilingual_report=template,
-            used_gemini=used_gemini,
+            used_gemini=used_ai,
             glossary_hits=glossary_hits,
         )
 
@@ -297,7 +297,7 @@ class LanguageSwitchEngine:
     # ──────────────────────────────────────
 
     def _translate_with_gemini(self, text: str, src: str, tgt: str, ctx: str) -> str:
-        """Terjemahkan menggunakan Gemini AI API."""
+        """Terjemahkan menggunakan DeepSeek AI API."""
         try:
             import urllib.request
             lang_name = {"id": "Bahasa Indonesia", "ja": "日本語 (Japanese)"}
@@ -316,21 +316,29 @@ class LanguageSwitchEngine:
             )
 
             payload = json.dumps({
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.1, "maxOutputTokens": 2048}
-            }).encode()
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": "Anda adalah penerjemah ahli istilah agronomi dan agribisnis profesional."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.1,
+                "max_tokens": 2048
+            }).encode("utf-8")
 
             req = urllib.request.Request(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.gemini_api_key}",
+                "https://api.deepseek.com/chat/completions",
                 data=payload,
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.deepseek_api_key}"
+                },
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=20) as resp:
-                result = json.loads(resp.read())
-                return result["candidates"][0]["content"]["parts"][0]["text"]
+                result = json.loads(resp.read().decode("utf-8"))
+                return result["choices"][0]["message"]["content"]
         except Exception as e:
-            logger.warning(f"Gemini translation failed: {e}, using template fallback")
+            logger.warning(f"DeepSeek translation failed: {e}, using template fallback")
             return self._translate_with_template(text, src, tgt, [])
 
     @staticmethod

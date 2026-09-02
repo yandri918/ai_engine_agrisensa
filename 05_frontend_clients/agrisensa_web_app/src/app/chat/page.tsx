@@ -31,7 +31,7 @@ export default function ChatPage() {
       id: "welcome",
       role: "assistant",
       content: `### 🌾 Halo! Saya AgriSensa AI Master Agronomist.
-Ditenagai oleh **Google Gemini 3.5 Flash — Deep Reasoning Engine**.
+Ditenagai oleh **DeepSeek-V3 — Deep Reasoning Engine**.
 
 Saya siap memberikan kajian teknis mendalam, analitis, dan bervariasi setiap jawaban:
 1. **Formulasi Pemupukan Berimbang**: Dosis Urea, NPK, SP-36, KCl, dan pupuk organik per fase vegetatif/generatif (dalam kg/Ha & HST).
@@ -135,7 +135,7 @@ Saya siap memberikan kajian teknis mendalam, analitis, dan bervariasi setiap jaw
             <div className="flex items-center gap-2">
               <h1 className="font-bold text-base text-white">Asisten AI Agronomi</h1>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                Gemini 3.5 Flash ✦
+                DeepSeek-V3 ✦
               </span>
             </div>
             <p className="text-[11px] text-slate-400">Penalaran agronomi tropis & manajemen budidaya presisi</p>
@@ -258,7 +258,7 @@ Saya siap memberikan kajian teknis mendalam, analitis, dan bervariasi setiap jaw
             </div>
             <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 text-xs text-slate-300 rounded-tl-none flex items-center gap-2 shadow-lg">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="font-medium text-emerald-300">Gemini sedang memproses analisis agronomi mendalam...</span>
+              <span className="font-medium text-emerald-300">DeepSeek sedang memproses analisis agronomi mendalam...</span>
             </div>
           </div>
         )}

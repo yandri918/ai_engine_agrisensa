@@ -294,7 +294,7 @@ async def list_modules():
             {"id": "forecast", "name": "Forecasting Model",   "endpoint": "POST /forecast/predict",
              "description": "Prediksi yield & harga 30/90/180 hari + risk scoring"},
             {"id": "language", "name": "Language Switch MCP", "endpoint": "POST /language/switch",
-             "description": "Terjemahan kontekstual ID ↔ 日本語 via Gemini + template bilingual"},
+             "description": "Terjemahan kontekstual ID ↔ 日本語 via DeepSeek + template bilingual"},
             {"id": "pdf",      "name": "PDF Generator",       "endpoint": "POST /pdf/generate",
              "description": "Laporan PDF bilingual dengan chart Matplotlib (ReportLab)"},
             {"id": "search",   "name": "DuckDuckGo Search MCP", "endpoint": "POST /mcp/search",
@@ -394,7 +394,7 @@ async def language_switch(req: LanguageRequest):
     """
     Terjemahan kontekstual pertanian ID ↔ 日本語.
     - Glossary 200+ istilah pertanian
-    - Terjemahan via Gemini AI (jika tersedia)
+    - Terjemahan via DeepSeek AI (jika tersedia)
     - Template bilingual untuk semua modul
     """
     t0 = time.time()
@@ -539,7 +539,7 @@ async def mcp_search(req: SearchMCPRequest):
     """
     Tool Pencarian Web DuckDuckGo (MCP).
     - Mencari harga komoditas terkini, regulasi, berita pertanian.
-    - Dilengkapi ekstraksi harga dan ringkasan otomatis via Gemini AI.
+    - Dilengkapi ekstraksi harga dan ringkasan otomatis via DeepSeek AI.
     """
     t0 = time.time()
     engine = get_engine("search")
@@ -566,7 +566,7 @@ async def mcp_parse_document(req: ParseDocumentMCPRequest):
     Tool Ekstraksi & Analisis Dokumen (PDF, Word, Excel, CSV) (MCP).
     - Parsing dokumen upload (base64 / path)
     - Ekstraksi otomatis biaya (Rp), luas lahan (ha), yield (ton/ha), komoditas
-    - Ringkasan eksekutif & temuan kunci oleh Gemini AI
+    - Ringkasan eksekutif & temuan kunci oleh DeepSeek AI
     """
     t0 = time.time()
     parser = get_engine("parser")
@@ -585,7 +585,7 @@ async def mcp_full_research(req: FullResearchMCPRequest):
     Pipeline Riset Otomatis End-to-End:
     1. Search DuckDuckGo sesuai topik/query
     2. Scrape top N URL yang relevan
-    3. Sintesis hasil & insight oleh Gemini AI
+    3. Sintesis hasil & insight oleh DeepSeek AI
     4. Render laporan PDF siap unduh
     """
     t0 = time.time()

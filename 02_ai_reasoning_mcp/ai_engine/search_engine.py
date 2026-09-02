@@ -124,7 +124,7 @@ class SearchEngine:
     """
 
     def __init__(self):
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
+        self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "") or os.getenv("OPENAI_API_KEY", "")
         self.backend = "duckduckgo" if DDG_AVAILABLE else "urllib-fallback"
         logger.info(f"SearchEngine init, backend={self.backend}")
 
@@ -326,8 +326,8 @@ class SearchEngine:
 
     def _summarize_with_gemini(self, query: str, results: List[SearchResult],
                                 language: str) -> tuple:
-        """Ringkas hasil pencarian dengan Gemini AI."""
-        if not self.gemini_api_key or not results:
+        """Ringkas hasil pencarian dengan DeepSeek AI."""
+        if not self.deepseek_api_key or not results:
             # Generate basic summary without AI
             summary = self._basic_summary(query, results, language)
             facts = self._extract_key_facts(results)
@@ -347,22 +347,30 @@ class SearchEngine:
                 f"Maksimal 3 paragraf singkat."
             )
             payload = json.dumps({
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 600}
-            }).encode()
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": "Anda adalah analis intelijen pasar dan agronomi AgriSensa."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.2,
+                "max_tokens": 600
+            }).encode("utf-8")
             req = urllib.request.Request(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.gemini_api_key}",
+                "https://api.deepseek.com/chat/completions",
                 data=payload,
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.deepseek_api_key}"
+                },
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=20) as resp:
-                gemini_resp = json.loads(resp.read())
-                summary_text = gemini_resp["candidates"][0]["content"]["parts"][0]["text"]
+                ai_resp = json.loads(resp.read().decode("utf-8"))
+                summary_text = ai_resp["choices"][0]["message"]["content"]
             facts = self._extract_key_facts(results)
             return summary_text, facts
         except Exception as e:
-            logger.warning(f"Gemini summarize failed: {e}")
+            logger.warning(f"DeepSeek summarize failed: {e}")
             return self._basic_summary(query, results, language), self._extract_key_facts(results)
 
     @staticmethod

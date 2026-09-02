@@ -718,8 +718,8 @@ class SOPEngine:
             "Siapkan stok bahan pestisida nabati (daun mimba, gadung, serai wangi) di kebun untuk pencegahan preventif.",
         ]
 
-        # If Gemini / DeepSeek API is available, enhance with LLM synthesis
-        if self.gemini_api_key:
+        # LLM Synthesis using DeepSeek-V3 API
+        if self.deepseek_api_key:
             try:
                 import urllib.request
                 prompt = (
@@ -730,22 +730,30 @@ class SOPEngine:
                 )
 
                 payload = json.dumps({
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800}
-                }).encode()
+                    "model": "deepseek-chat",
+                    "messages": [
+                        {"role": "system", "content": "Anda adalah Lead Agronomist AI di AgriSensa Engine."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 800
+                }).encode("utf-8")
 
                 req_obj = urllib.request.Request(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.gemini_api_key}",
+                    "https://api.deepseek.com/chat/completions",
                     data=payload,
-                    headers={"Content-Type": "application/json"},
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {self.deepseek_api_key}"
+                    },
                     method="POST"
                 )
-                with urllib.request.urlopen(req_obj, timeout=12) as resp:
-                    result = json.loads(resp.read())
-                    ai_text = result["candidates"][0]["content"]["parts"][0]["text"]
+                with urllib.request.urlopen(req_obj, timeout=15) as resp:
+                    result = json.loads(resp.read().decode("utf-8"))
+                    ai_text = result["choices"][0]["message"]["content"]
                     return ai_text, checklist
             except Exception as e:
-                logger.warning(f"LLM SOP synthesis fallback: {e}")
+                logger.warning(f"DeepSeek SOP synthesis fallback: {e}")
 
         return fallback_insights, checklist
 

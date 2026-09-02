@@ -84,7 +84,7 @@ class DocumentParser:
     """
 
     def __init__(self):
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
+        self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "") or os.getenv("OPENAI_API_KEY", "")
         logger.info(
             f"DocumentParser init (PyMuPDF={PYMUPDF_AVAILABLE}, docx={DOCX_AVAILABLE}, openpyxl={OPENPYXL_AVAILABLE})"
         )
@@ -379,7 +379,7 @@ class DocumentParser:
             "Mendukung Pengendalian Hama Terpadu (PHT) dan Pertanian Berkelanjutan (ESG)",
         ]
 
-        if self.gemini_api_key:
+        if self.deepseek_api_key:
             try:
                 import urllib.request
                 prompt = (
@@ -392,25 +392,33 @@ class DocumentParser:
                 )
 
                 payload = json.dumps({
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800}
-                }).encode()
+                    "model": "deepseek-chat",
+                    "messages": [
+                        {"role": "system", "content": "Anda adalah asisten cerdas analisis dokumen pertanian."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 800
+                }).encode("utf-8")
 
                 req = urllib.request.Request(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.gemini_api_key}",
+                    "https://api.deepseek.com/chat/completions",
                     data=payload,
-                    headers={"Content-Type": "application/json"},
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {self.deepseek_api_key}"
+                    },
                     method="POST"
                 )
                 with urllib.request.urlopen(req, timeout=15) as resp:
-                    result = json.loads(resp.read())
-                    summary_raw = result["candidates"][0]["content"]["parts"][0]["text"]
+                    result = json.loads(resp.read().decode("utf-8"))
+                    summary_raw = result["choices"][0]["message"]["content"]
 
-                gemini_findings = [line.strip("- •* ") for line in summary_raw.splitlines() if line.strip().startswith(("-", "•", "*", "1.", "2.", "3."))]
-                if gemini_findings:
-                    return summary_raw, gemini_findings[:5]
+                ai_findings = [line.strip("- •* ") for line in summary_raw.splitlines() if line.strip().startswith(("-", "•", "*", "1.", "2.", "3."))]
+                if ai_findings:
+                    return summary_raw, ai_findings[:5]
             except Exception as e:
-                logger.warning(f"Gemini API offline, using fallback structured summary: {e}")
+                logger.warning(f"DeepSeek API offline, using fallback structured summary: {e}")
 
         return structured_summary, findings
 
