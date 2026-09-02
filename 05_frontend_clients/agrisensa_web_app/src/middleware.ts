@@ -1,20 +1,10 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// Public routes that don't enforce mandatory sign-in redirect
+// Only authentication routes (sign-in & sign-up) are public.
+// All dashboard features, analytics, and modules require authentication first.
 const isPublicRoute = createRouteMatcher([
-  "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
-  "/api(.*)",
-  "/analyst(.*)",
-  "/fertilizer(.*)",
-  "/documents(.*)",
-  "/mlops(.*)",
-  "/chat(.*)",
-  "/sop(.*)",
-  "/monte-carlo(.*)",
-  "/rab(.*)",
-  "/market(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
