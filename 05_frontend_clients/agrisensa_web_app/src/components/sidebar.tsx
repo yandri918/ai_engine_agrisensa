@@ -19,6 +19,7 @@ export function Sidebar() {
       title: "Laboratorium & Analisis",
       items: [
         { name: "Laboratorium Pupuk", href: "/fertilizer", tag: "Formulasi" },
+        { name: "Perpustakaan Riset & SOP", href: "/documents", tag: "PDF AI" },
         { name: "Laboratorium MLOps", href: "/mlops", tag: "16 Komoditas" },
         { name: "Asisten AI Agronomi", href: "/chat" },
       ],

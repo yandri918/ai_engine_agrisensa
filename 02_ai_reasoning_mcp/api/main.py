@@ -23,7 +23,7 @@ import time
 from typing import Any, Dict, Optional, List
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -873,6 +873,65 @@ async def get_fertilizer_materials():
     """Mengambil database 15+ bahan baku organik ilmiah (kadar NPK, C/N ratio, fungsi)."""
     engine: FertilizerEngine = get_engine("fertilizer")
     return {"success": True, "materials": engine.get_raw_materials()}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Document Intelligence & Library Endpoints (PDF, Word, Excel, CSV)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class StoredDocumentParseRequest(BaseModel):
+    filename: str = Field(..., description="Nama file dalam knowledge base misal: M-48_Pestisida_Nabati.pdf")
+
+@app.get("/documents/library", summary="Daftar Dokumen Baku Knowledge Base", tags=["Document Intelligence"])
+async def get_document_library():
+    """Mengambil katalog dokumen riset, SOP, dan regulasi pertanian dalam library AgriSensa."""
+    try:
+        engine: DocumentParser = get_engine("parser")
+        docs = engine.list_library_documents()
+        return {"success": True, "total": len(docs), "documents": docs}
+    except Exception as e:
+        logger.error(f"Error fetching document library: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/documents/parse-upload", summary="Parsing & Ekstraksi Dokumen Upload Eksternal", tags=["Document Intelligence"])
+async def parse_uploaded_document(file: UploadFile = File(...)):
+    """
+    Ekstraksi Dokumen Eksternal:
+    Menerima file PDF, DOCX, XLSX, atau CSV yang diunggah pengguna, mengekstrak teks, tabel, metrik pertanian/SOP,
+    dan menghasilkan ringkasan wawasan strategis bertenaga AI Engine.
+    """
+    try:
+        engine: DocumentParser = get_engine("parser")
+        contents = await file.read()
+        res = engine.parse_file(contents, file.filename)
+        return {"success": True, "data": res.__dict__}
+    except Exception as e:
+        logger.error(f"Error parsing uploaded file {file.filename}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/documents/parse-stored", summary="Parsing Dokumen Standar dari Knowledge Base", tags=["Document Intelligence"])
+async def parse_stored_document(req: StoredDocumentParseRequest):
+    """
+    Parsing Dokumen Tersimpan:
+    Memproses file PDF baku yang tersimpan di server knowledge base (contoh: M-48_Pestisida_Nabati.pdf)
+    dan mengembalikan struktur formula, tabel, dan temuan kunci.
+    """
+    try:
+        engine: DocumentParser = get_engine("parser")
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        file_path = os.path.join(base_dir, "knowledge_base", "pdfs", req.filename)
+        
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail=f"File {req.filename} tidak ditemukan di library")
+
+        res = engine.parse_from_path(file_path)
+        return res
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error parsing stored document {req.filename}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 if __name__ == "__main__":
