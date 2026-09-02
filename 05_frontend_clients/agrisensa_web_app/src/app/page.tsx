@@ -16,6 +16,7 @@ import {
   Leaf,
   CloudSun,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -42,18 +43,25 @@ export default function DashboardPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/chat"
+              href="/analyst"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 text-sm font-bold shadow-lg shadow-emerald-500/25 hover:opacity-95 transition-all hover:scale-[1.02]"
             >
-              <MessageSquareCode className="w-4 h-4" />
+              <Sparkles className="w-4 h-4" />
+              <span>Data Analyst Eksekutif</span>
+            </Link>
+            <Link
+              href="/chat"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-500 text-white text-sm font-semibold transition-all hover:bg-slate-800"
+            >
+              <MessageSquareCode className="w-4 h-4 text-emerald-400" />
               <span>Tanya AI Agronomi</span>
             </Link>
             <Link
-              href="/mlops"
+              href="/fertilizer"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-500 text-white text-sm font-semibold transition-all hover:bg-slate-800"
             >
-              <FlaskConical className="w-4 h-4 text-cyan-400" />
-              <span>Uji Parameter Tanah</span>
+              <Leaf className="w-4 h-4 text-teal-400" />
+              <span>Laboratorium Pupuk</span>
             </Link>
           </div>
         </div>
@@ -139,25 +147,52 @@ export default function DashboardPage() {
             <span>Modul Analisis & Simulasi Cerdas</span>
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Card 1: AI Chat */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Card 0: Data Analyst Eksekutif (Featured) */}
             <Link
-              href="/chat"
-              className="glass-panel p-5 rounded-2xl glass-panel-hover border border-slate-800/80 flex flex-col justify-between group"
+              href="/analyst"
+              className="glass-panel p-5 rounded-2xl glass-panel-hover border border-emerald-500/40 bg-gradient-to-br from-emerald-950/40 to-slate-900/90 flex flex-col justify-between group shadow-lg shadow-emerald-500/10 md:col-span-2 lg:col-span-1"
             >
               <div>
-                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
-                  <MessageSquareCode className="w-5 h-5" />
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
+                    AI Strategic
+                  </span>
                 </div>
                 <h3 className="text-base font-bold text-white mt-4 group-hover:text-emerald-400 transition-colors">
-                  Asisten AI Agronomi
+                  Data Analyst Eksekutif
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Konsultasi penanganan hama, formulasi dosis pupuk NPK berimbang, dan manajemen budidaya tanaman presisi.
+                  Sintesis lintas-workflow: analisis kelayakan 5-pilar, Monte Carlo, jejak karbon ESG, dan rekomendasi preskriptif modern.
                 </p>
               </div>
               <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400 mt-4">
-                <span>Buka Percakapan</span>
+                <span>Buka Dashboard Analis</span>
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </div>
+            </Link>
+
+            {/* Card 1: Fertilizer Lab */}
+            <Link
+              href="/fertilizer"
+              className="glass-panel p-5 rounded-2xl glass-panel-hover border border-teal-500/30 flex flex-col justify-between group"
+            >
+              <div>
+                <div className="h-10 w-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 group-hover:scale-110 transition-transform">
+                  <Leaf className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-bold text-white mt-4 group-hover:text-teal-400 transition-colors">
+                  Laboratorium Pupuk
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Kalkulator formulasi pupuk organik C/N ratio, substitusi hara NPK blending, dan SOP pembuatan hayati.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-semibold text-teal-400 mt-4">
+                <span>Formulasi Pupuk</span>
                 <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
               </div>
             </Link>
@@ -175,7 +210,7 @@ export default function DashboardPage() {
                   Laboratorium MLOps
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Prediksi kecocokan komoditas berdasarkan sensor tanah (NPK, pH) dan analisis faktor penentu SHAP.
+                  Prediksi 16+ komoditas multi-kategori, radar komparator head-to-head, dan analisis SHAP.
                 </p>
               </div>
               <div className="flex items-center gap-1 text-xs font-semibold text-cyan-400 mt-4">
@@ -184,24 +219,24 @@ export default function DashboardPage() {
               </div>
             </Link>
 
-            {/* Card 3: Monte Carlo */}
+            {/* Card 3: Market Intelligence */}
             <Link
-              href="/monte-carlo"
-              className="glass-panel p-5 rounded-2xl glass-panel-hover border border-slate-800/80 flex flex-col justify-between group"
+              href="/market"
+              className="glass-panel p-5 rounded-2xl glass-panel-hover border border-sky-500/30 flex flex-col justify-between group"
             >
               <div>
-                <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
-                  <TrendingUp className="w-5 h-5" />
+                <div className="h-10 w-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 group-hover:scale-110 transition-transform">
+                  <LineChart className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-white mt-4 group-hover:text-amber-400 transition-colors">
-                  Simulasi Monte Carlo
+                <h3 className="text-base font-bold text-white mt-4 group-hover:text-sky-400 transition-colors">
+                  Intelijen Pasar (ID/JP)
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Hitung 10.000 skenario risiko cuaca & fluktuasi harga pasar untuk mengetahui batas aman modal usaha tani.
+                  Database 35+ komoditas pasar Indonesia (BAPANAS) & Jepang (JA Group) + matriks arbitrase ekspor.
                 </p>
               </div>
-              <div className="flex items-center gap-1 text-xs font-semibold text-amber-400 mt-4">
-                <span>Jalankan Simulasi</span>
+              <div className="flex items-center gap-1 text-xs font-semibold text-sky-400 mt-4">
+                <span>Pantau Harga Pasar</span>
                 <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
               </div>
             </Link>
@@ -219,11 +254,33 @@ export default function DashboardPage() {
                   Generator RAB Otomatis
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Susun Rencana Anggaran Biaya pertanian per hektar dengan rincian benih, pupuk, pestisida, dan tenaga kerja.
+                  Standar baku biaya budidaya per hektar, alokasi HOK tenaga kerja, dan cetak PDF resmi.
                 </p>
               </div>
               <div className="flex items-center gap-1 text-xs font-semibold text-purple-400 mt-4">
                 <span>Buat Anggaran</span>
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </div>
+            </Link>
+
+            {/* Card 5: Monte Carlo */}
+            <Link
+              href="/monte-carlo"
+              className="glass-panel p-5 rounded-2xl glass-panel-hover border border-slate-800/80 flex flex-col justify-between group"
+            >
+              <div>
+                <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-bold text-white mt-4 group-hover:text-amber-400 transition-colors">
+                  Simulasi Monte Carlo
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Hitung 10.000 skenario risiko cuaca & fluktuasi harga pasar untuk batas aman modal usaha tani.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-semibold text-amber-400 mt-4">
+                <span>Jalankan Simulasi</span>
                 <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
               </div>
             </Link>
